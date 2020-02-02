@@ -10,6 +10,7 @@ public class test {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
 		}
+		System.out.println("hey!");
 	}
 
 }
