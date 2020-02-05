@@ -74,12 +74,12 @@ public class StaticGenAndSearch {
 			fringe.add(map[rowIndex+1][colIndex]);
 		}
 		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && map[rowIndex][colIndex+1].prev == null && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
-			fringe.add(map[rowIndex][colIndex+1]);
 			map[rowIndex][colIndex+1].prev = curr;
+			fringe.add(map[rowIndex][colIndex+1]);
 		}
 		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && map[rowIndex-1][colIndex].prev == null && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
-			fringe.add(map[rowIndex-1][colIndex]);
 			map[rowIndex-1][colIndex].prev = curr;
+			fringe.add(map[rowIndex-1][colIndex]);
 		}
 		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && map[rowIndex][colIndex-1].prev == null && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
 			map[rowIndex][colIndex-1].prev = curr;
@@ -157,6 +157,7 @@ public class StaticGenAndSearch {
 		map[0][0].distanceEst = 0;
 		while (!fringe.isEmpty()) {
 			PathNode curr = fringe.poll();
+			visited[curr.row][curr.col] = true;
 			if (curr.equals(map[map.length-1][map.length-1])) {
 				return curr;
 			}else{
