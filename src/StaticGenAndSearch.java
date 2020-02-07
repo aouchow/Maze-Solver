@@ -87,6 +87,29 @@ public class StaticGenAndSearch {
 		}
 		return fringe;
 	}
+	
+	public static LinkedList<PathNode> updateFringeButPoorly(LinkedList<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited){
+		int rowIndex = curr.row;
+		int colIndex = curr.col;
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && map[rowIndex-1][colIndex].prev == null && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
+			map[rowIndex-1][colIndex].prev = curr;
+			fringe.add(map[rowIndex-1][colIndex]);
+		}
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && map[rowIndex][colIndex-1].prev == null && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
+			map[rowIndex][colIndex-1].prev = curr;
+			fringe.add(map[rowIndex][colIndex-1]);
+		}
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && map[rowIndex+1][colIndex].prev == null && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
+			map[rowIndex+1][colIndex].prev = curr;
+			fringe.add(map[rowIndex+1][colIndex]);
+		}
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && map[rowIndex][colIndex+1].prev == null && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
+			map[rowIndex][colIndex+1].prev = curr;
+			fringe.add(map[rowIndex][colIndex+1]);
+		}
+		return fringe;
+	}
+	
 	public static PathNode DepthFirstSearch(PathNode[][] map) {
 		if (map == null || map[0] == null || map[0].length == 0) return null;
 		map[0][0].prev = null; //start has no predecessor 
@@ -190,6 +213,7 @@ public class StaticGenAndSearch {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
 		}
+		
 	}
 
 }
