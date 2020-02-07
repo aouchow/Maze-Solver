@@ -189,6 +189,7 @@ public class StaticGenAndSearch {
 		while (!fringeFromStart.isEmpty() && !fringeFromGoal.isEmpty()) {
 			helperBFS (map, visitedFromStart, fringeFromStart);
 			helperBFS (map, visitedFromGoal, fringeFromGoal);
+			System.out.println("heyyy");
 			
 			//check for intersection
 			for (int i = 0; i < map.length; i++) {
