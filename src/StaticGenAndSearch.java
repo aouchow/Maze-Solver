@@ -253,7 +253,7 @@ public class StaticGenAndSearch {
 			maxFringeSize = 0;
 			PathNode[][] testMap = generateMap(i, 0.25);
 			long startTime = System.nanoTime();
-			PathNode goal = AStar(testMap, true);
+			PathNode goal = AStar(testMap, false);
 			long endTime = System.nanoTime();
 			long executionTime = endTime - startTime;
 			printMazeSolutionGUI(testMap, goal);
@@ -275,7 +275,7 @@ public class StaticGenAndSearch {
 		}
 =======
 		}*/
-		//dimTester();
+		dimTester();
 //>>>>>>> 2dcd6c658f2c524639061abdd7ea786ab6db2cb8
 		
 	}
