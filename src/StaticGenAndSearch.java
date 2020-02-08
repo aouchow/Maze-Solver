@@ -6,7 +6,8 @@ import java.awt.*;
 public class StaticGenAndSearch {
 	static int cellsTraversed = 0;
 	static int maxFringeSize = 0;
-	public static PathNode[][] generateMap(int dim, double p){
+	
+	public static PathNode[][] generateMap (int dim, double p){
 		PathNode[][] map = new PathNode[dim][dim];
 		for (int i = 0; i < dim; i++) {
 			for (int j = 0; j < dim; j++) {
@@ -14,8 +15,24 @@ public class StaticGenAndSearch {
 				while (random == 0) { //0 is not an acceptable value, assign a new #
 					random = Math.random();
 				}
-				map[i][j] = new PathNode(i, j, p <= random); //probability(p <= random) == probability a cell is empty
-					
+				map[i][j] = new PathNode(i, j, p <= random, false); //probability(p <= random) == probability a cell is empty	
+			}
+		}
+		map[0][0].isEmpty = true; //start is reachable
+		map[dim-1][dim-1].isEmpty = true; //goal is reachable
+		return map;
+	}
+	
+	public static PathNode [][] generateMapOnFire (int dim, double p, double f) {
+		PathNode[][] map = new PathNode[dim][dim];
+		for (int i = 0; i < dim; i++) {
+			for (int j = 0; j < dim; j++) {
+				double randomP = Math.random();
+				while (randomP == 0) { //0 is not an acceptable value, assign a new #
+					randomP = Math.random();
+				}
+				double randomF = Math.random()
+				map[i][j] = new PathNode(i, j, p <= randomP, ); //probability(p <= random) == probability a cell is empty	
 			}
 		}
 		map[0][0].isEmpty = true; //start is reachable

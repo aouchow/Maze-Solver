@@ -4,13 +4,15 @@ public class PathNode implements Comparable<PathNode>{
 	int col;
 	double distanceEst;
 	boolean isEmpty; //true if Node is safe to move to
+	boolean isOnFire;
 	PathNode prev;
 	
-	public PathNode(int row, int col, boolean isEmpty){
+	public PathNode(int row, int col, boolean isEmpty, boolean isOnFire){
 		this.row = row;
 		this.col = col;
 		this.distanceEst = 0;
 		this.isEmpty = isEmpty;
+		this.isOnFire = isOnFire;
 		this.prev = null;
 	}
 
