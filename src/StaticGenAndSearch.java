@@ -174,6 +174,60 @@ public class StaticGenAndSearch {
 		return null;
 	}
 	
+	public static PathNode bidirectionalBFS (PathNode [][] map) {
+		if (map == null || map[0] == null || map[0].length == 0) return null; //map isn't constructed in a valid way
+		PathNode start = map[0][0];
+		PathNode goal = map[map.length-1][map.length-1];		
+		start.prev = null;
+		goal.prev = null;
+		
+		//construct visited arrays for bfs from start and goal
+		boolean [][] visitedFromStart = new boolean [map.length][map.length];
+		boolean [][] visitedFromGoal = new boolean [map.length][map.length];
+		
+		//construct queues for bfs from start and goal
+		LinkedList<PathNode> fringeFromStart = new LinkedList<PathNode>();
+		LinkedList<PathNode> fringeFromGoal = new LinkedList<PathNode>();
+		
+		//initially add the start and goals into the queues
+		fringeFromStart.add(start);
+		fringeFromGoal.add(goal);
+		
+		while (!fringeFromStart.isEmpty() && !fringeFromGoal.isEmpty()) {
+			helperBFS (map, visitedFromStart, fringeFromStart);
+			helperBFS (map, visitedFromGoal, fringeFromGoal);
+			System.out.println("heyyy");
+			
+			//check for intersection
+			for (int i = 0; i < map.length; i++) {
+				for (int j = 0; j < map.length; j++) {
+					if (visitedFromStart[i][j] && visitedFromGoal[i][j] == true) { //intersection found
+						//need to reverse pointers for the visitedFromGoal
+						System.out.println("heyyy");
+						PathNode current = map[i][j];
+						PathNode previous = null; //should not equal null!!!
+						while (current !=null) {
+							PathNode next = current.prev;
+							current.prev = previous;
+							current = next;
+							previous = current;
+						}
+					}
+				}
+			}
+		}
+		return goal;
+	}
+	
+	//helper method for bidirectional BFS
+	public static void helperBFS (PathNode [][] map, boolean [][] visited, LinkedList <PathNode> fringe) {
+		PathNode curr = fringe.getFirst();
+		if (!visited [curr.row][curr.col]) {
+			visited [curr.row][curr.col] = true;
+			fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+		}
+	}
+	
 	public static void printMap(PathNode[][]map) {
 		for (int i = 0; i < map.length; i++) {
 			for (int j = 0; j < map.length; j++) {
@@ -245,6 +299,7 @@ public class StaticGenAndSearch {
 		System.out.println();
 		PathNode goal = AStar(testMap, true);
 		printMazeSolutionGUI(testMap, goal);
+		PathNode goal = bidirectionalBFS(testMap);
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
