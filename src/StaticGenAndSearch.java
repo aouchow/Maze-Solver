@@ -7,7 +7,7 @@ public class StaticGenAndSearch {
 	static int cellsTraversed = 0;
 	static int maxFringeSize = 0;
 	
-	public static PathNode[][] generateMap (int dim, double p){
+	public static PathNode[][] generateMap (int dim, double p, boolean onFire){
 		PathNode[][] map = new PathNode[dim][dim];
 		for (int i = 0; i < dim; i++) {
 			for (int j = 0; j < dim; j++) {
@@ -20,23 +20,16 @@ public class StaticGenAndSearch {
 		}
 		map[0][0].isEmpty = true; //start is reachable
 		map[dim-1][dim-1].isEmpty = true; //goal is reachable
-		return map;
-	}
-	
-	public static PathNode [][] generateMapOnFire (int dim, double p, double f) {
-		PathNode[][] map = new PathNode[dim][dim];
-		for (int i = 0; i < dim; i++) {
-			for (int j = 0; j < dim; j++) {
-				double randomP = Math.random();
-				while (randomP == 0) { //0 is not an acceptable value, assign a new #
-					randomP = Math.random();
-				}
-				double randomF = Math.random();
-				map[i][j] = new PathNode(i, j, p <= randomP, true); //probability(p <= random) == probability a cell is empty	
+		
+		if (onFire) { //can start or goal begin on fire?
+			int rowOnFire = (int) (Math.random() * dim); //random() does not include 1
+			int colOnFire = (int) (Math.random() * dim);
+			while (!map[rowOnFire][colOnFire].isEmpty) { //if there is an obstacle, recompute cell on fire
+				rowOnFire = (int) (Math.random() * dim);
+				colOnFire = (int) (Math.random() * dim);
 			}
+			map[rowOnFire][colOnFire].isOnFire = true;
 		}
-		map[0][0].isEmpty = true; //start is reachable
-		map[dim-1][dim-1].isEmpty = true; //goal is reachable
 		return map;
 	}
 	
@@ -272,10 +265,12 @@ public class StaticGenAndSearch {
 		for (int i = 0; i < map.length; i++) {
 			for (int j = 0; j < map.length; j++) {
 				System.out.print("(" + map[i][j].row + "," + map[i][j].col + ") ");
-				if (map[i][j].isEmpty) {
+				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
 					System.out.print("free");
-				}else {
+				}else if (!map[i][j].isEmpty){
 					System.out.print("occupied");
+				}else if (map[i][j].isOnFire) {
+					System.out.print("fire");
 				}
 				System.out.print("\t");
 			}
@@ -292,10 +287,13 @@ public class StaticGenAndSearch {
 			for (int j = 0; j < map.length; j++) {
 				cells[i][j] = new JPanel();
 				cells[i][j].setBorder(BorderFactory.createLineBorder(Color.black));
-				if (map[i][j].isEmpty) {
+				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
 					cells[i][j].setBackground(Color.white);
-				} else {
+				} else if (!map[i][j].isEmpty) {
 					cells[i][j].setBackground(Color.black);
+				}
+				else if (map[i][j].isOnFire) {
+					cells[i][j].setBackground(Color.orange);
 				}
 				maze.add(cells[i][j]);
 			}
@@ -322,7 +320,7 @@ public class StaticGenAndSearch {
 		for (int i = 4; i < 9; i++) {
 			cellsTraversed = 0;
 			maxFringeSize = 0;
-			PathNode[][] testMap = generateMap(i, 0.25);
+			PathNode[][] testMap = generateMap(i, 0.25, false);
 			long startTime = System.nanoTime();
 			PathNode goal = AStar(testMap, false);
 			long endTime = System.nanoTime();
@@ -334,7 +332,7 @@ public class StaticGenAndSearch {
 		}
 	}
 	public static void main(String[] args) {
-		/*PathNode[][] testMap = generateMap(4, 0.5);
+		/*PathNode[][] testMap = generateMap(4, 0.5, true);
 		printMap(testMap);
 		System.out.println();
 		PathNode goal = AStar(testMap, true);
@@ -343,8 +341,8 @@ public class StaticGenAndSearch {
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
-		}*/
-		dimTester();
+		}
+		dimTester(); */
 		
 	}
 
