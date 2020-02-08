@@ -1,3 +1,4 @@
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import javax.swing.*;
@@ -124,18 +125,17 @@ public class StaticGenAndSearch {
 			}
 		}
 		fringe.add(map[0][0]);
+		maxFringeSize = Math.max(maxFringeSize, fringe.size());
 		while (!fringe.isEmpty()) {
+			cellsTraversed++;
 			PathNode curr = fringe.getLast();
 			fringe.removeLast();
-			if (visited[curr.row][curr.col]) {
-				System.out.println("Found a node we've seen before: " + curr.row + " " + curr.col);
-				continue;
-			} 
 			visited[curr.row][curr.col] = true; //mark node as visited
 			if (curr.equals(map[map.length-1][map.length-1])) { //curr is the goal state
 				return curr;
 			}else{
-				fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+				fringe = updateFringeButPoorly(fringe, map, curr, visited); //updates fringe
+				maxFringeSize = Math.max(maxFringeSize, fringe.size());
 			}
 		}
 		return null;
@@ -152,7 +152,9 @@ public class StaticGenAndSearch {
 			}
 		}
 		fringe.add(map[0][0]);
+		maxFringeSize = Math.max(maxFringeSize, fringe.size());
 		while (!fringe.isEmpty()) {
+			cellsTraversed++;
 			PathNode curr = fringe.getFirst();
 			fringe.remove(); //removes first element from list
 			if (visited[curr.row][curr.col]) continue;
@@ -161,13 +163,14 @@ public class StaticGenAndSearch {
 				return curr;
 			}else{
 				fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+				maxFringeSize = Math.max(maxFringeSize, fringe.size());
 			}
 		}
 		return null;
 	}
 	
 	public static PathNode AStar(PathNode[][]map, boolean usesEuclidean) {
-		if (map == null || map[0] == null || map[0].length == 0) return null; //map isn't constructed in a valid way
+		if (map == null || map[0] == null || map[0].length == 0) return null;  //map isn't constructed in a valid way
 		boolean[][] visited = new boolean[map.length][map.length];
 		int[][]distance = new int[map.length][map.length]; //distance (# of operations) from start to PathNode at distance[i][j]
 		for (int i = 0; i < visited.length; i++) {
@@ -248,18 +251,31 @@ public class StaticGenAndSearch {
 		maze.setVisible(true);
 	}
 	public static void dimTester() {
-		for (int i = 4; i < 9; i++) {
+		for (int i = 10; i < 11; i++) {
 			cellsTraversed = 0;
 			maxFringeSize = 0;
-			PathNode[][] testMap = generateMap(i, 0.25);
+			PathNode[][] testMap = generateMap(i, 0.2);
 			long startTime = System.nanoTime();
-			PathNode goal = AStar(testMap, false);
+			PathNode goal = BreadthFirstSearch(testMap);
 			long endTime = System.nanoTime();
 			long executionTime = endTime - startTime;
 			printMazeSolutionGUI(testMap, goal);
-			System.out.println("Time elapsed for A* to solve dim = " + i + " maze with p = 0.5: " + executionTime);
+			System.out.println("Time elapsed for DFS to solve dim = " + i + " maze with p = 0.5: " + (executionTime/1000000000.0));
+			System.out.println("Total number of cells traversed by DFS with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
+			System.out.println("Maximum fringe size using DFS with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
+			System.out.println();
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			for (int g = 0; g < testMap.length; g++) {
+				for (int j = 0; j < testMap.length; j++) {
+					testMap[g][j].prev = null;
+				}
+			}
+			PathNode secondGoal = AStar(testMap, false);
+			printMazeSolutionGUI(testMap, secondGoal);
 			System.out.println("Total number of cells traversed by A* with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
 			System.out.println("Maximum fringe size using A* with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
+			System.out.println();
 		}
 	}
 	public static void main(String[] args) {
@@ -277,7 +293,7 @@ public class StaticGenAndSearch {
 		}*/
 		dimTester();
 //>>>>>>> 2dcd6c658f2c524639061abdd7ea786ab6db2cb8
-		
+	
 	}
 
 }
