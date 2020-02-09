@@ -1,5 +1,6 @@
 import java.util.LinkedList;
 import java.util.PriorityQueue;
+import java.util.LinkedHashSet;
 import javax.swing.*;
 import java.awt.*;
 
@@ -67,6 +68,42 @@ public class StaticGenAndSearch {
 			fringe.add(map[rowIndex][colIndex-1]);
 		}
 		return fringe;
+	}
+	
+	public static PathNode updateFringeBDBFS(LinkedHashSet<PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe, PathNode [][] map, PathNode curr, boolean [][] visited) {
+		int rowIndex = curr.row;
+		int colIndex = curr.col;
+		
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
+			if (intersectFringe.contains(map[rowIndex+1][colIndex])) {
+				return map[rowIndex+1][colIndex];
+			}
+			map[rowIndex+1][colIndex].prev = curr;
+			expandFringe.add(map[rowIndex+1][colIndex]);
+		}
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex][colIndex+1])) {
+				return map[rowIndex][colIndex+1];
+			}
+			map[rowIndex][colIndex+1].prev = curr;
+			expandFringe.add(map[rowIndex][colIndex+1]);
+		}
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex-1][colIndex])) {
+				return map[rowIndex-1][colIndex];
+			}
+			map[rowIndex-1][colIndex].prev = curr;
+			expandFringe.add(map[rowIndex-1][colIndex]);
+		}
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex][colIndex-1])) {
+				return map[rowIndex][colIndex-1];
+			}
+			map[rowIndex][colIndex-1].prev = curr;
+			expandFringe.add(map[rowIndex][colIndex-1]);
+		}
+		
+		return null;
 	}
 	
 	public static LinkedList<PathNode> updateFringe(LinkedList<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited){
@@ -186,20 +223,54 @@ public class StaticGenAndSearch {
 		boolean [][] visitedFromGoal = new boolean [map.length][map.length];
 		
 		//construct queues for bfs from start and goal
-		LinkedList<PathNode> fringeFromStart = new LinkedList<PathNode>();
-		LinkedList<PathNode> fringeFromGoal = new LinkedList<PathNode>();
+		LinkedHashSet<PathNode> fringeFromStart = new LinkedHashSet<PathNode>();
+		LinkedHashSet<PathNode> fringeFromGoal = new LinkedHashSet<PathNode>();
 		
 		//initially add the start and goals into the queues
 		fringeFromStart.add(start);
 		fringeFromGoal.add(goal);
 		
 		while (!fringeFromStart.isEmpty() && !fringeFromGoal.isEmpty()) {
-			helperBFS (map, visitedFromStart, fringeFromStart);
-			helperBFS (map, visitedFromGoal, fringeFromGoal);
-			System.out.println("heyyy");
-			
+			System.out.println("The cells in the fringeFromStart are: ");
+			for (PathNode cell : fringeFromStart) {
+				System.out.println("(" + cell.row + ", " + cell.col + ")");
+			}
+			System.out.println("The cells in the fringeFromGoal are: ");
+			for (PathNode cell : fringeFromGoal) {
+				System.out.println("(" + cell.row + ", " + cell.col + ")");
+			}
+			PathNode intersectFromStart = helperBFS (map, visitedFromStart, fringeFromStart, fringeFromGoal);
+			if (intersectFromStart != null) { // We found a node in fringeFromGoal that we tried to add to fringeFromStart
+				System.out.println("Found a node in fringeFromGoal that we intersected while trying to expand fringeFromStart.");
+				PathNode ptr = fringeFromStart.iterator().next();
+				PathNode ptr2 = intersectFromStart;
+				while (ptr != null) {
+					PathNode temp = ptr.prev;
+					ptr.prev = ptr2;
+					ptr2 = ptr;
+					ptr = temp;
+				}
+				return ptr2; // We should be done with path construction, hopefully (this goes start to goal) and returns start PathNode.
+			}
+			PathNode intersectFromGoal = helperBFS (map, visitedFromGoal, fringeFromGoal, fringeFromStart);
+			if (intersectFromGoal != null) { // We found a node in fringeFromStart that we tried to add to fringeFromGoal
+				System.out.println("Found a node in fringeFromStart that we intersected while trying to expand fringeFromGoal.");
+				PathNode ptr = fringeFromGoal.iterator().next();
+				PathNode ptr2 = intersectFromGoal;
+				while (ptr != null) {
+					PathNode temp = ptr.prev;
+					ptr.prev = ptr2;
+					ptr2 = ptr;
+					ptr = temp;
+				}
+				return ptr2; // We should be done with path construction, hopefully (this goes goal to start) and returns goal PathNode.
+			}
+			// System.out.println("heyyy");
+			// If we get here, then both BFS's were run for one step and neither intersected the other's fringe
+			fringeFromStart.remove(fringeFromStart.iterator().next()); // Removes first node from the start fringe that we just processed
+			fringeFromGoal.remove(fringeFromGoal.iterator().next()); // Removes first node from the goal fringe that we just processed
 			//check for intersection
-			for (int i = 0; i < map.length; i++) {
+			/*for (int i = 0; i < map.length; i++) {
 				for (int j = 0; j < map.length; j++) {
 					if (visitedFromStart[i][j] && visitedFromGoal[i][j] == true) { //intersection found
 						//need to reverse pointers for the visitedFromGoal
@@ -214,18 +285,26 @@ public class StaticGenAndSearch {
 						}
 					}
 				}
-			}
+			}*/
 		}
-		return goal;
+		return null;
 	}
 	
-	//helper method for bidirectional BFS
-	public static void helperBFS (PathNode [][] map, boolean [][] visited, LinkedList <PathNode> fringe) {
-		PathNode curr = fringe.getFirst();
-		if (!visited [curr.row][curr.col]) {
+	// Helper method for bidirectional BFS. Returns null if fringe node has already been visited (should never happen)
+	// or if all possible neighbors of first node in fringe were added to fringe normally. Otherwise, one of the neighbors
+	// of the first node was already on the fringe of the BFS procedure occurring in the opposite direction.
+	public static PathNode helperBFS (PathNode [][] map, boolean [][] visited, LinkedHashSet <PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe) {
+		PathNode curr = expandFringe.iterator().next(); // We are visiting the first node on the fringe
+		if (!visited [curr.row][curr.col]) { // This should always be true, because nodes added to the fringe are checked to not have already been visited.
+			System.out.println("Processing node: (" + curr.row + ", " + curr.col + ") in helperBFS");
 			visited [curr.row][curr.col] = true;
-			fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+			PathNode intersect = updateFringeBDBFS(expandFringe, intersectFringe, map, curr, visited);
+			if (intersect == null) {
+				System.out.println("There was no intersection, so we are now updating the fringe.");
+			}
+			return intersect;
 		}
+		return null;
 	}
 	
 	public static void printMap(PathNode[][]map) {
@@ -243,7 +322,7 @@ public class StaticGenAndSearch {
 		}
 	}
 	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal) {
-		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by A*");
+		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by Bidirectional BFS");
 		maze.setSize(500, 500);
 		maze.setLayout(new GridLayout(map.length, map.length));
 		JPanel cells[][] = new JPanel[map.length][map.length];
@@ -294,17 +373,16 @@ public class StaticGenAndSearch {
 		}
 	}
 	public static void main(String[] args) {
-		/*PathNode[][] testMap = generateMap(4, 0.5);
+		PathNode[][] testMap = generateMap(10, 0.22);
 		printMap(testMap);
 		System.out.println();
-		PathNode goal = AStar(testMap, true);
-		printMazeSolutionGUI(testMap, goal);
 		PathNode goal = bidirectionalBFS(testMap);
+		printMazeSolutionGUI(testMap, goal);
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
-		}*/
-		dimTester();
+		}
+		//dimTester();
 		
 	}
 
