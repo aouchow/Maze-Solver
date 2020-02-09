@@ -22,7 +22,7 @@ public class StaticGenAndSearch {
 		map[0][0].isEmpty = true; //start is reachable
 		map[dim-1][dim-1].isEmpty = true; //goal is reachable
 		
-		if (onFire) { //can start or goal begin on fire?
+		if (onFire) { //start or goal begin on fire?
 			int rowOnFire = (int) (Math.random() * dim); //random() does not include 1
 			int colOnFire = (int) (Math.random() * dim);
 			while (!map[rowOnFire][colOnFire].isEmpty) { //if there is an obstacle, recompute cell on fire
@@ -347,13 +347,58 @@ public class StaticGenAndSearch {
 			System.out.println();
 		}
 	}
+	
+	public static PathNode[][] fireSpreads (PathNode [][] map, double q) {
+		boolean [][] onFireNext = new boolean [map.length][map.length];
+		//q = flammability rate of fire
+		//multiple cells can become on fire per move
+		//neighbors not including diagonal neighbors
+		//obstructions block the fire
+		for (int i = 0; i < map.length; i++) {
+			for (int j = 0; j < map.length; j++) {
+				int numNbrFire = 0; //k = number of neighbors on fire
+				if (!map[i][j].isEmpty || map[i][j].isOnFire) {
+					continue;
+				}
+				if (i+1 < map.length && map[i+1][j].isOnFire) {
+					numNbrFire++;
+				}
+				if (j+1 < map.length && map[i][j+1].isOnFire) {
+					numNbrFire++;
+				}
+				if (i-1 >= 0 && map[i-1][j].isOnFire) {
+					numNbrFire++;
+				}
+				if (j-1 >= 0 && map[i][j-1].isOnFire) {
+					numNbrFire++;
+				}
+//				System.out.println ("(" + i + ", " + j + ")" + "numNbrFire = " + numNbrFire);
+				double onFire = 1-(Math.pow(1-q, numNbrFire));
+				double random = Math.random();
+				if (random <= onFire) {
+					onFireNext[i][j] = true;
+				}
+			}
+		}
+		for (int i = 0; i < onFireNext.length; i++) {
+			for (int j = 0; j < onFireNext.length; j++) {
+				if (onFireNext[i][j]) {
+					map[i][j].isOnFire = true;
+				}
+			}
+		}
+		return map;
+	}
+	
 	public static void main(String[] args) {
-		/*PathNode[][] testMap = generateMap(4, 0.5, true);
+		PathNode[][] testMap = generateMap(4, 0.5, true);
 		printMap(testMap);
 		System.out.println();
-		PathNode goal = AStar(testMap, true);
+		PathNode goal = testMap[testMap.length-1][testMap.length-1];
 		printMazeSolutionGUI(testMap, goal);
-		PathNode goal = bidirectionalBFS(testMap);
+		fireSpreads (testMap, 1.0);
+		printMazeSolutionGUI(testMap, goal);
+		/*PathNode goal = bidirectionalBFS(testMap);
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
