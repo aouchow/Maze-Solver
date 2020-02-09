@@ -127,6 +127,7 @@ public class StaticGenAndSearch {
 		}
 		return fringe;
 	}
+	
 	public static PathNode DepthFirstSearch(PathNode[][] map) {
 		if (map == null || map[0] == null || map[0].length == 0) return null;
 		map[0][0].prev = null; //start has no predecessor 
@@ -231,17 +232,8 @@ public class StaticGenAndSearch {
 		fringeFromGoal.add(goal);
 		
 		while (!fringeFromStart.isEmpty() && !fringeFromGoal.isEmpty()) {
-			System.out.println("The cells in the fringeFromStart are: ");
-			for (PathNode cell : fringeFromStart) {
-				System.out.println("(" + cell.row + ", " + cell.col + ")");
-			}
-			System.out.println("The cells in the fringeFromGoal are: ");
-			for (PathNode cell : fringeFromGoal) {
-				System.out.println("(" + cell.row + ", " + cell.col + ")");
-			}
 			PathNode intersectFromStart = helperBFS (map, visitedFromStart, fringeFromStart, fringeFromGoal);
 			if (intersectFromStart != null) { // We found a node in fringeFromGoal that we tried to add to fringeFromStart
-				System.out.println("Found a node in fringeFromGoal that we intersected while trying to expand fringeFromStart.");
 				PathNode ptr = fringeFromStart.iterator().next();
 				PathNode ptr2 = intersectFromStart;
 				while (ptr != null) {
@@ -254,7 +246,6 @@ public class StaticGenAndSearch {
 			}
 			PathNode intersectFromGoal = helperBFS (map, visitedFromGoal, fringeFromGoal, fringeFromStart);
 			if (intersectFromGoal != null) { // We found a node in fringeFromStart that we tried to add to fringeFromGoal
-				System.out.println("Found a node in fringeFromStart that we intersected while trying to expand fringeFromGoal.");
 				PathNode ptr = fringeFromGoal.iterator().next();
 				PathNode ptr2 = intersectFromGoal;
 				while (ptr != null) {
@@ -265,27 +256,11 @@ public class StaticGenAndSearch {
 				}
 				return ptr2; // We should be done with path construction, hopefully (this goes goal to start) and returns goal PathNode.
 			}
-			// System.out.println("heyyy");
+	
 			// If we get here, then both BFS's were run for one step and neither intersected the other's fringe
 			fringeFromStart.remove(fringeFromStart.iterator().next()); // Removes first node from the start fringe that we just processed
 			fringeFromGoal.remove(fringeFromGoal.iterator().next()); // Removes first node from the goal fringe that we just processed
-			//check for intersection
-			/*for (int i = 0; i < map.length; i++) {
-				for (int j = 0; j < map.length; j++) {
-					if (visitedFromStart[i][j] && visitedFromGoal[i][j] == true) { //intersection found
-						//need to reverse pointers for the visitedFromGoal
-						System.out.println("heyyy");
-						PathNode current = map[i][j];
-						PathNode previous = null; //should not equal null!!!
-						while (current !=null) {
-							PathNode next = current.prev;
-							current.prev = previous;
-							current = next;
-							previous = current;
-						}
-					}
-				}
-			}*/
+			
 		}
 		return null;
 	}
@@ -296,12 +271,8 @@ public class StaticGenAndSearch {
 	public static PathNode helperBFS (PathNode [][] map, boolean [][] visited, LinkedHashSet <PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe) {
 		PathNode curr = expandFringe.iterator().next(); // We are visiting the first node on the fringe
 		if (!visited [curr.row][curr.col]) { // This should always be true, because nodes added to the fringe are checked to not have already been visited.
-			System.out.println("Processing node: (" + curr.row + ", " + curr.col + ") in helperBFS");
 			visited [curr.row][curr.col] = true;
 			PathNode intersect = updateFringeBDBFS(expandFringe, intersectFringe, map, curr, visited);
-			if (intersect == null) {
-				System.out.println("There was no intersection, so we are now updating the fringe.");
-			}
 			return intersect;
 		}
 		return null;
@@ -321,6 +292,7 @@ public class StaticGenAndSearch {
 			System.out.println();
 		}
 	}
+	
 	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal) {
 		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by Bidirectional BFS");
 		maze.setSize(500, 500);
@@ -357,6 +329,7 @@ public class StaticGenAndSearch {
 		maze.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		maze.setVisible(true);
 	}
+	
 	public static void dimTester() {
 		for (int i = 4; i < 9; i++) {
 			cellsTraversed = 0;
@@ -372,8 +345,9 @@ public class StaticGenAndSearch {
 			System.out.println("Maximum fringe size using A* with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
 		}
 	}
+	
 	public static void main(String[] args) {
-		PathNode[][] testMap = generateMap(10, 0.22);
+		PathNode[][] testMap = generateMap(11, 0.22);
 		printMap(testMap);
 		System.out.println();
 		PathNode goal = bidirectionalBFS(testMap);
