@@ -1,6 +1,7 @@
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
+import java.util.LinkedHashSet;
 import javax.swing.*;
 import java.awt.*;
 
@@ -8,7 +9,7 @@ public class StaticGenAndSearch {
 	static int cellsTraversed = 0;
 	static int maxFringeSize = 0;
 	
-	public static PathNode[][] generateMap (int dim, double p){
+	public static PathNode[][] generateMap (int dim, double p, boolean onFire){
 		PathNode[][] map = new PathNode[dim][dim];
 		for (int i = 0; i < dim; i++) {
 			for (int j = 0; j < dim; j++) {
@@ -21,23 +22,16 @@ public class StaticGenAndSearch {
 		}
 		map[0][0].isEmpty = true; //start is reachable
 		map[dim-1][dim-1].isEmpty = true; //goal is reachable
-		return map;
-	}
-	
-	public static PathNode [][] generateMapOnFire (int dim, double p, double f) {
-		PathNode[][] map = new PathNode[dim][dim];
-		for (int i = 0; i < dim; i++) {
-			for (int j = 0; j < dim; j++) {
-				double randomP = Math.random();
-				while (randomP == 0) { //0 is not an acceptable value, assign a new #
-					randomP = Math.random();
-				}
-				double randomF = Math.random();
-				map[i][j] = new PathNode(i, j, p <= randomP, true); //probability(p <= random) == probability a cell is empty	
+		
+		if (onFire) { //start or goal begin on fire?
+			int rowOnFire = (int) (Math.random() * dim); //random() does not include 1
+			int colOnFire = (int) (Math.random() * dim);
+			while (!map[rowOnFire][colOnFire].isEmpty) { //if there is an obstacle, recompute cell on fire
+				rowOnFire = (int) (Math.random() * dim);
+				colOnFire = (int) (Math.random() * dim);
 			}
+			map[rowOnFire][colOnFire].isOnFire = true;
 		}
-		map[0][0].isEmpty = true; //start is reachable
-		map[dim-1][dim-1].isEmpty = true; //goal is reachable
 		return map;
 	}
 	
@@ -85,6 +79,42 @@ public class StaticGenAndSearch {
 			fringe.add(map[rowIndex][colIndex-1]);
 		}
 		return fringe;
+	}
+	
+	public static PathNode updateFringeBDBFS(LinkedHashSet<PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe, PathNode [][] map, PathNode curr, boolean [][] visited) {
+		int rowIndex = curr.row;
+		int colIndex = curr.col;
+		
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
+			if (intersectFringe.contains(map[rowIndex+1][colIndex])) {
+				return map[rowIndex+1][colIndex];
+			}
+			map[rowIndex+1][colIndex].prev = curr;
+			expandFringe.add(map[rowIndex+1][colIndex]);
+		}
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex][colIndex+1])) {
+				return map[rowIndex][colIndex+1];
+			}
+			map[rowIndex][colIndex+1].prev = curr;
+			expandFringe.add(map[rowIndex][colIndex+1]);
+		}
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex-1][colIndex])) {
+				return map[rowIndex-1][colIndex];
+			}
+			map[rowIndex-1][colIndex].prev = curr;
+			expandFringe.add(map[rowIndex-1][colIndex]);
+		}
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
+			if (intersectFringe.contains(map[rowIndex][colIndex-1])) {
+				return map[rowIndex][colIndex-1];
+			}
+			map[rowIndex][colIndex-1].prev = curr;
+			expandFringe.add(map[rowIndex][colIndex-1]);
+		}
+		
+		return null;
 	}
 	
 	public static LinkedList<PathNode> updateFringe(LinkedList<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited){
@@ -229,63 +259,79 @@ public class StaticGenAndSearch {
 		boolean [][] visitedFromGoal = new boolean [map.length][map.length];
 		
 		//construct queues for bfs from start and goal
-		LinkedList<PathNode> fringeFromStart = new LinkedList<PathNode>();
-		LinkedList<PathNode> fringeFromGoal = new LinkedList<PathNode>();
+		LinkedHashSet<PathNode> fringeFromStart = new LinkedHashSet<PathNode>();
+		LinkedHashSet<PathNode> fringeFromGoal = new LinkedHashSet<PathNode>();
 		
 		//initially add the start and goals into the queues
 		fringeFromStart.add(start);
 		fringeFromGoal.add(goal);
 		
 		while (!fringeFromStart.isEmpty() && !fringeFromGoal.isEmpty()) {
-			helperBFS (map, visitedFromStart, fringeFromStart);
-			helperBFS (map, visitedFromGoal, fringeFromGoal);
-			System.out.println("heyyy");
-			
-			//check for intersection
-			for (int i = 0; i < map.length; i++) {
-				for (int j = 0; j < map.length; j++) {
-					if (visitedFromStart[i][j] && visitedFromGoal[i][j] == true) { //intersection found
-						//need to reverse pointers for the visitedFromGoal
-						PathNode current = map[i][j];
-						PathNode previous = null; //should not equal null!!!
-						while (current !=null) {
-							PathNode next = current.prev;
-							current.prev = previous;
-							current = next;
-							previous = current;
-						}
-					}
+			PathNode intersectFromStart = helperBFS (map, visitedFromStart, fringeFromStart, fringeFromGoal);
+			if (intersectFromStart != null) { // We found a node in fringeFromGoal that we tried to add to fringeFromStart
+				PathNode ptr = fringeFromStart.iterator().next();
+				PathNode ptr2 = intersectFromStart;
+				while (ptr != null) {
+					PathNode temp = ptr.prev;
+					ptr.prev = ptr2;
+					ptr2 = ptr;
+					ptr = temp;
 				}
+				return ptr2; // We should be done with path construction, hopefully (this goes start to goal) and returns start PathNode.
 			}
+			PathNode intersectFromGoal = helperBFS (map, visitedFromGoal, fringeFromGoal, fringeFromStart);
+			if (intersectFromGoal != null) { // We found a node in fringeFromStart that we tried to add to fringeFromGoal
+				PathNode ptr = fringeFromGoal.iterator().next();
+				PathNode ptr2 = intersectFromGoal;
+				while (ptr != null) {
+					PathNode temp = ptr.prev;
+					ptr.prev = ptr2;
+					ptr2 = ptr;
+					ptr = temp;
+				}
+				return ptr2; // We should be done with path construction, hopefully (this goes goal to start) and returns goal PathNode.
+			}
+	
+			// If we get here, then both BFS's were run for one step and neither intersected the other's fringe
+			fringeFromStart.remove(fringeFromStart.iterator().next()); // Removes first node from the start fringe that we just processed
+			fringeFromGoal.remove(fringeFromGoal.iterator().next()); // Removes first node from the goal fringe that we just processed
+			
 		}
-		return goal;
+		return null;
 	}
 	
-	//helper method for bidirectional BFS
-	public static void helperBFS (PathNode [][] map, boolean [][] visited, LinkedList <PathNode> fringe) {
-		PathNode curr = fringe.getFirst();
-		if (!visited [curr.row][curr.col]) {
+	// Helper method for bidirectional BFS. Returns null if fringe node has already been visited (should never happen)
+	// or if all possible neighbors of first node in fringe were added to fringe normally. Otherwise, one of the neighbors
+	// of the first node was already on the fringe of the BFS procedure occurring in the opposite direction.
+	public static PathNode helperBFS (PathNode [][] map, boolean [][] visited, LinkedHashSet <PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe) {
+		PathNode curr = expandFringe.iterator().next(); // We are visiting the first node on the fringe
+		if (!visited [curr.row][curr.col]) { // This should always be true, because nodes added to the fringe are checked to not have already been visited.
 			visited [curr.row][curr.col] = true;
-			fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+			PathNode intersect = updateFringeBDBFS(expandFringe, intersectFringe, map, curr, visited);
+			return intersect;
 		}
+		return null;
 	}
 	
 	public static void printMap(PathNode[][]map) {
 		for (int i = 0; i < map.length; i++) {
 			for (int j = 0; j < map.length; j++) {
 				System.out.print("(" + map[i][j].row + "," + map[i][j].col + ") ");
-				if (map[i][j].isEmpty) {
+				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
 					System.out.print("free");
-				}else {
+				}else if (!map[i][j].isEmpty){
 					System.out.print("occupied");
+				}else if (map[i][j].isOnFire) {
+					System.out.print("fire");
 				}
 				System.out.print("\t");
 			}
 			System.out.println();
 		}
 	}
+	
 	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal) {
-		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by A*");
+		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by Bidirectional BFS");
 		maze.setSize(500, 500);
 		maze.setLayout(new GridLayout(map.length, map.length));
 		JPanel cells[][] = new JPanel[map.length][map.length];
@@ -294,10 +340,13 @@ public class StaticGenAndSearch {
 			for (int j = 0; j < map.length; j++) {
 				cells[i][j] = new JPanel();
 				cells[i][j].setBorder(BorderFactory.createLineBorder(Color.black));
-				if (map[i][j].isEmpty) {
+				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
 					cells[i][j].setBackground(Color.white);
-				} else {
+				} else if (!map[i][j].isEmpty) {
 					cells[i][j].setBackground(Color.black);
+				}
+				else if (map[i][j].isOnFire) {
+					cells[i][j].setBackground(Color.orange);
 				}
 				maze.add(cells[i][j]);
 			}
@@ -320,11 +369,12 @@ public class StaticGenAndSearch {
 		maze.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		maze.setVisible(true);
 	}
+	
 	public static void dimTester() {
 		for (int i = 10; i < 11; i++) {
 			cellsTraversed = 0;
 			maxFringeSize = 0;
-			PathNode[][] testMap = generateMap(i, 0.2);
+			PathNode[][] testMap = generateMap(i, 0.25, false);
 			long startTime = System.nanoTime();
 			PathNode goal = BreadthFirstSearch(testMap);
 			long endTime = System.nanoTime();
@@ -348,20 +398,68 @@ public class StaticGenAndSearch {
 			System.out.println();
 		}
 	}
+	
+	public static PathNode[][] fireSpreads (PathNode [][] map, double q) {
+		boolean [][] onFireNext = new boolean [map.length][map.length];
+		//q = flammability rate of fire
+		//multiple cells can become on fire per move
+		//neighbors not including diagonal neighbors
+		//obstructions block the fire
+		for (int i = 0; i < map.length; i++) {
+			for (int j = 0; j < map.length; j++) {
+				int numNbrFire = 0; //k = number of neighbors on fire
+				if (!map[i][j].isEmpty || map[i][j].isOnFire) {
+					continue;
+				}
+				if (i+1 < map.length && map[i+1][j].isOnFire) {
+					numNbrFire++;
+				}
+				if (j+1 < map.length && map[i][j+1].isOnFire) {
+					numNbrFire++;
+				}
+				if (i-1 >= 0 && map[i-1][j].isOnFire) {
+					numNbrFire++;
+				}
+				if (j-1 >= 0 && map[i][j-1].isOnFire) {
+					numNbrFire++;
+				}
+//				System.out.println ("(" + i + ", " + j + ")" + "numNbrFire = " + numNbrFire);
+				double onFire = 1-(Math.pow(1-q, numNbrFire));
+				double random = Math.random();
+				if (random <= onFire) {
+					onFireNext[i][j] = true;
+				}
+			}
+		}
+		for (int i = 0; i < onFireNext.length; i++) {
+			for (int j = 0; j < onFireNext.length; j++) {
+				if (onFireNext[i][j]) {
+					map[i][j].isOnFire = true;
+				}
+			}
+		}
+		return map;
+	}
+	
 	public static void main(String[] args) {
-		/*PathNode[][] testMap = generateMap(4, 0.5);
+		PathNode[][] fireMap = generateMap(4, 0.5, true);
+		printMap(fireMap);
+		System.out.println();
+		PathNode fireGoal = fireMap[fireMap.length-1][fireMap.length-1];
+		printMazeSolutionGUI(fireMap, fireGoal);
+		fireSpreads(fireMap, 1.0);
+		printMazeSolutionGUI(fireMap, fireGoal);  
+		
+		/*PathNode[][] testMap = generateMap(11, 0.22, false);
 		printMap(testMap);
 		System.out.println();
-		PathNode goal = AStar(testMap, true);
-		printMazeSolutionGUI(testMap, goal);
 		PathNode goal = bidirectionalBFS(testMap);
+		printMazeSolutionGUI(testMap, goal);
+
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
-		}*/
-		dimTester();
-
-
+		}*/		
 	}
 
 }
