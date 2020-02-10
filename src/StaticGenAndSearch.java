@@ -246,7 +246,6 @@ public class StaticGenAndSearch {
 				for (int j = 0; j < map.length; j++) {
 					if (visitedFromStart[i][j] && visitedFromGoal[i][j] == true) { //intersection found
 						//need to reverse pointers for the visitedFromGoal
-						System.out.println("heyyy");
 						PathNode current = map[i][j];
 						PathNode previous = null; //should not equal null!!!
 						while (current !=null) {
