@@ -2,8 +2,15 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.LinkedHashSet;
+import java.util.HashMap;
 import javax.swing.*;
 import java.awt.*;
+import org.jfree.chart.*;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.xy.DefaultXYDataset;
+import org.jfree.ui.ApplicationFrame;
+import org.jfree.ui.RefineryUtilities;
 
 public class StaticGenAndSearch {
 	static int cellsTraversed = 0;
@@ -33,6 +40,14 @@ public class StaticGenAndSearch {
 			map[rowOnFire][colOnFire].isOnFire = true;
 		}
 		return map;
+	}
+	
+	public static void resetMap(PathNode[][] map) {
+		for (int i = 0; i < map.length; i++) {
+			for (int j = 0; j < map.length; j++) {
+				map[i][j].prev = null;
+			}
+		}
 	}
 	
 	public static PriorityQueue<PathNode> updateFringeWithHeuristic(PriorityQueue<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited, boolean usesEuclidean, int[][]distance){
@@ -330,8 +345,8 @@ public class StaticGenAndSearch {
 		}
 	}
 	
-	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal) {
-		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by Bidirectional BFS");
+	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal, String algorithm) {
+		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by " + algorithm);
 		maze.setSize(500, 500);
 		maze.setLayout(new GridLayout(map.length, map.length));
 		JPanel cells[][] = new JPanel[map.length][map.length];
@@ -354,8 +369,8 @@ public class StaticGenAndSearch {
 		
 		JLabel startLabel = new JLabel("S");
 		JLabel goalLabel = new JLabel("G");
-		startLabel.setFont(new Font("Times New Roman", 1, 20));
-		goalLabel.setFont(new Font("Times New Roman", 1, 20));
+		startLabel.setFont(new Font("Times New Roman", 1, 6));
+		goalLabel.setFont(new Font("Times New Roman", 1, 6));
 		cells[0][0].setLayout(new GridBagLayout());
 		cells[0][0].add(startLabel);
 		cells[map.length-1][map.length-1].setLayout(new GridBagLayout());
@@ -370,6 +385,118 @@ public class StaticGenAndSearch {
 		maze.setVisible(true);
 	}
 	
+	// Creates the dataset needed to plot density against maze solvability. To ensure a relatively
+	// smooth curve, there are data points at 0.02 increments from p = 0 to p = 0.98. Each data point
+	// is computed by generating 1000 mazes at that p value, solving each one of them, and counting 
+	// the number of the total mazes that return solutions. That value is divided by 1000 to get the
+	// decimal value of solvability between 0 and 1.
+	public static DefaultXYDataset mazeSolvability() {
+		DefaultXYDataset data = new DefaultXYDataset();
+		
+		double[][] dfsData = new double[2][50];
+		double[][] bfsData = new double[2][50];
+		double[][] bdbfsData = new double[2][50];
+		double[][] euclidData = new double[2][50];
+		double[][] manhattanData = new double[2][50];
+		
+		for (int p = 0; p < 50; p++) {
+			int numDFSSolved = 0;
+			int numBFSSolved = 0;
+			int numBDBFSSolved = 0;
+			int numManhattanSolved = 0;
+			int numEuclidSolved = 0;
+			
+			for (int trial = 0; trial < 1000; trial++) {
+				PathNode [][] testMap = generateMap(100, 0.02*p, false);
+				
+				PathNode dfsSoln = DepthFirstSearch(testMap);
+				if (dfsSoln != null) {
+					numDFSSolved++;
+				}
+				resetMap(testMap);
+				
+				PathNode bfsSoln = BreadthFirstSearch(testMap);
+				if (bfsSoln != null) {
+					numBFSSolved++;
+				}
+				resetMap(testMap);
+				
+				PathNode bdbfsSoln = bidirectionalBFS(testMap);
+				if (bdbfsSoln != null) {
+					numBDBFSSolved++;
+				}
+				resetMap(testMap);
+				
+				PathNode manhattanAStarSoln = AStar(testMap, false);
+				if (manhattanAStarSoln != null) {
+					numManhattanSolved++;
+				}
+				resetMap(testMap);
+				
+				PathNode euclidAStarSoln = AStar(testMap, true);
+				if (euclidAStarSoln != null) {
+					numEuclidSolved++;
+				}
+				
+			}
+			
+			dfsData[0][p] = 0.02*p;
+			dfsData[1][p] = (numDFSSolved/1000.0);
+			bfsData[0][p] = 0.02*p;
+			bfsData[1][p] = (numBFSSolved/1000.0);
+			bdbfsData[0][p] = 0.02*p;
+			bdbfsData[1][p] = (numBDBFSSolved/1000.0);
+			euclidData[0][p] = 0.02*p;
+			euclidData[1][p] = (numEuclidSolved/1000.0);
+			manhattanData[0][p] = 0.02*p;
+			manhattanData[1][p] = (numManhattanSolved/1000.0);
+			
+		}
+		/*System.out.println("DFS Data: ");
+		for (int i = 0; i < dfsData[0].length; i++) {
+			System.out.println("p: " + dfsData[0][i] + " Solvability: " + dfsData[1][i]);
+		}
+		System.out.println("BFS Data: ");
+		for (int i = 0; i < bfsData[0].length; i++) {
+			System.out.println("p: " + bfsData[0][i] + " Solvability: " + bfsData[1][i]);
+		}
+		System.out.println("BD BFS Data: ");
+		for (int i = 0; i < bfsData[0].length; i++) {
+			System.out.println("p: " + bdbfsData[0][i] + " Solvability: " + bdbfsData[1][i]);
+		}
+		System.out.println("Euclid A* Data: ");
+		for (int i = 0; i < dfsData[0].length; i++) {
+			System.out.println("p: " + euclidData[0][i] + " Solvability: " + euclidData[1][i]);
+		}
+		System.out.println("Manhattan A* Data: ");
+		for (int i = 0; i < manhattanData[0].length; i++) {
+			System.out.println("p: " + manhattanData[0][i] + " Solvability: " + manhattanData[1][i]);
+		}*/
+		data.addSeries("A*-Manhattan", manhattanData);
+		data.addSeries("DFS", dfsData);
+		data.addSeries("BFS", bfsData);
+		data.addSeries("Bidirectional BFS", bdbfsData);
+		data.addSeries("A*-Euclidean", euclidData);
+		return data;
+	}
+	
+	// When called from main, generates a line plot between density (p) on the x-axis and 
+	// a decimal value between 0 and 1 representing the probability that a randomly generated maze
+	// with density p will be solved. Plots are generated for all the different algorithms
+	// explored in this project, and the probability of being solved is generated based on sample
+	// sizes of 100 mazes for each data point.
+	public static void plotMazeSolvability() {
+		ApplicationFrame solvabilityPlotApp = new ApplicationFrame("Maze Solvability Window");
+		JFreeChart solvabilityPlot = ChartFactory.createXYLineChart("Maze Solvability at Different Densities", "Density (p)", "Fraction Solved", mazeSolvability(), PlotOrientation.VERTICAL, true, true, false);
+		ChartPanel chartPanel = new ChartPanel(solvabilityPlot);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
+		solvabilityPlotApp.setContentPane(chartPanel);
+		solvabilityPlotApp.pack();
+		RefineryUtilities.centerFrameOnScreen(solvabilityPlotApp);
+		solvabilityPlotApp.setVisible(true);
+	}
+	
+	
 	public static void dimTester() {
 		for (int i = 10; i < 11; i++) {
 			cellsTraversed = 0;
@@ -379,7 +506,7 @@ public class StaticGenAndSearch {
 			PathNode goal = BreadthFirstSearch(testMap);
 			long endTime = System.nanoTime();
 			long executionTime = endTime - startTime;
-			printMazeSolutionGUI(testMap, goal);
+			printMazeSolutionGUI(testMap, goal, "BFS");
 			System.out.println("Time elapsed for DFS to solve dim = " + i + " maze with p = 0.5: " + (executionTime/1000000000.0));
 			System.out.println("Total number of cells traversed by DFS with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
 			System.out.println("Maximum fringe size using DFS with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
@@ -392,7 +519,7 @@ public class StaticGenAndSearch {
 				}
 			}
 			PathNode secondGoal = AStar(testMap, false);
-			printMazeSolutionGUI(testMap, secondGoal);
+			printMazeSolutionGUI(testMap, secondGoal, "A*-Manhattan");
 			System.out.println("Total number of cells traversed by A* with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
 			System.out.println("Maximum fringe size using A* with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
 			System.out.println();
@@ -441,25 +568,56 @@ public class StaticGenAndSearch {
 		return map;
 	}
 	
+	// Allows for a single maze to be generated with density (p) set to the specified
+	// parameter. Then, all of the algorithms for solving static mazes implemented in this
+	// project are called on the same maze and their results displayed on the GUI.
+	public static void pathsForAllAlgorithms(double p) {
+		PathNode[][] testMap = generateMap(100, p, false);
+		
+		PathNode dfsGoal = DepthFirstSearch(testMap);
+		printMazeSolutionGUI(testMap, dfsGoal, "DFS");
+		resetMap(testMap);
+		
+		PathNode bfsGoal = BreadthFirstSearch(testMap);
+		printMazeSolutionGUI(testMap, bfsGoal, "BFS");
+		resetMap(testMap);
+		
+		PathNode bidirectBFSGoal = bidirectionalBFS(testMap);
+		printMazeSolutionGUI(testMap, bidirectBFSGoal, "Bidirectional BFS");
+		resetMap(testMap);
+		
+		PathNode euclidGoal = AStar(testMap, true);
+		printMazeSolutionGUI(testMap, euclidGoal, "A*-Euclidean");
+		resetMap(testMap);
+		
+		PathNode manhattanGoal = AStar(testMap, false);
+		printMazeSolutionGUI(testMap, manhattanGoal, "A*-Manhattan");
+	}
+	
 	public static void main(String[] args) {
-		PathNode[][] fireMap = generateMap(4, 0.5, true);
+		/*PathNode[][] fireMap = generateMap(100, 0.5, true);
 		printMap(fireMap);
 		System.out.println();
 		PathNode fireGoal = fireMap[fireMap.length-1][fireMap.length-1];
-		printMazeSolutionGUI(fireMap, fireGoal);
+		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search");
 		fireSpreads(fireMap, 1.0);
-		printMazeSolutionGUI(fireMap, fireGoal);  
+		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search");*/ 
+		
+		//plotMazeSolvability();
+		pathsForAllAlgorithms(0.2);
 		
 		/*PathNode[][] testMap = generateMap(11, 0.22, false);
 		printMap(testMap);
 		System.out.println();
-		PathNode goal = bidirectionalBFS(testMap);
+		PathNode goal = AStar(testMap, true);
+		resetMap(testMap);
+		goal = AStar(testMap, false);
 		printMazeSolutionGUI(testMap, goal);
 
 		while (goal!= null) {
 			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
 			goal = goal.prev;
-		}*/		
+		} */ 
 	}
 
 }
