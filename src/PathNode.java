@@ -20,4 +20,9 @@ public class PathNode implements Comparable<PathNode>{
 	public int compareTo(PathNode o) { //allows comparisons of nodes based on estimated distance
 		return Double.compare(this.distanceEst, o.distanceEst);
 	}
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+
+	    return super.clone();
+	}
 }

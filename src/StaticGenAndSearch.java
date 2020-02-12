@@ -36,6 +36,14 @@ public class StaticGenAndSearch {
 		return map;
 	}
 	
+	public static void resetVisited(PathNode[][]map) {
+		for (int i = 0; i < map.length; i++) {
+			for (int j = 0; j < map.length; j++) {
+				map[i][j].prev = null;
+			}
+		}
+	}
+	
 	public static PriorityQueue<PathNode> updateFringeWithHeuristic(PriorityQueue<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited, boolean usesEuclidean, int[][]distance){
 		int rowIndex = curr.row;
 		int colIndex = curr.col;
@@ -333,6 +341,49 @@ public class StaticGenAndSearch {
 			System.out.println();
 		}
 	}
+	public static PathNode[][] deepCopy(PathNode[][] original) throws CloneNotSupportedException{ //should not throw exception--clone should be supported
+		PathNode[][]copy = new PathNode[original.length][original.length];
+		for (int i = 0; i < copy.length; i++) {
+			for (int j = 0; j < copy.length; j++) {
+				copy[i][j] = (PathNode) original[i][j].clone(); //TODO: figure out deep copy
+			}
+		}
+	}
+	
+	public static PathNode[][] helperFindHardest(PathNode[][] current, boolean usesDFS){ //find the hardest child of the current maze
+		PathNode[][] hardest = null;
+		if (usesDFS) { //use the # of nodes expanded by DFS as the hardness metric
+			DepthFirstSearch(current);
+			int mostCellsTraversed = cellsTraversed; //number of nodes expanded by original maze
+			PathNode[][] hardest = new PathNode[current.length][current.length];
+			for (int i = 0; i < current.length; i++) {
+				for (int j = 0; j < current.length; j++) {
+					cellsTraversed = 0;
+					resetVisited(current); //allow the current hardest board to be traversed again
+					current[i][j].isEmpty = !current[i][j].isEmpty; //change the occupation status of one node
+					DepthFirstSearch(current);
+					if (cellsTraversed > mostCellsTraversed) { //current child is the hardest child thus far
+						//hardest  = deep copy of current
+						mostCellsTraversed = cellsTraversed;
+					}
+					current[i][j].isEmpty = !current[i][j].isEmpty;
+				} 
+			}
+		}else{
+			
+		}
+		return hardest;
+	}
+	
+	public static PathNode[][] getHardestMaze(PathNode[][] original, boolean usesDFS) {
+		long startTime = System.nanoTime();
+		//PathNode[][] hardestMaze = original;
+		while ((System.nanoTime()/1000000000.0) < ((startTime)/1000000000.0)+1.0) { //while less than 1 second has elapsed
+			//hardestMaze = helperFindHardest(hardestMaze, usesDFS);
+			//resetVisited(hardestMaze);
+		}
+		//return hardestMaze;
+	}
 	
 	public static void printMazeSolutionGUI(PathNode [][] map, PathNode goal, String methodName) {
 		JFrame maze = new JFrame("Maze with Dim = " + map.length + " Solved by " +methodName);
@@ -390,11 +441,7 @@ public class StaticGenAndSearch {
 			System.out.println();
 			cellsTraversed = 0;
 			maxFringeSize = 0;
-			for (int g = 0; g < testMap.length; g++) {
-				for (int j = 0; j < testMap.length; j++) {
-					testMap[g][j].prev = null;
-				}
-			}
+			resetVisited(testMap);
 			PathNode secondGoal = AStar(testMap, false);
 			printMazeSolutionGUI(testMap, secondGoal, "A*");
 			System.out.println("Total number of cells traversed by A* with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
