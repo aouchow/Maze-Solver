@@ -34,7 +34,7 @@ public class StaticGenAndSearch {
 		if (onFire) { //start or goal begin on fire?
 			int rowOnFire = (int) (Math.random() * dim); //random() does not include 1
 			int colOnFire = (int) (Math.random() * dim);
-			while (!map[rowOnFire][colOnFire].isEmpty) { //if there is an obstacle, recompute cell on fire
+			while (!map[rowOnFire][colOnFire].isEmpty || rowOnFire == 0 && colOnFire == 0) { //if there is an obstacle or fire starts at 0,0, recompute cell on fire
 				rowOnFire = (int) (Math.random() * dim);
 				colOnFire = (int) (Math.random() * dim);
 			}
@@ -54,7 +54,7 @@ public class StaticGenAndSearch {
 	public static PriorityQueue<PathNode> updateFringeWithHeuristic(PriorityQueue<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited, boolean usesEuclidean, int[][]distance){
 		int rowIndex = curr.row;
 		int colIndex = curr.col;
-		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && map[rowIndex+1][colIndex].prev == null && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !map[rowIndex+1][colIndex].isOnFire && map[rowIndex+1][colIndex].prev == null && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
 			map[rowIndex+1][colIndex].prev = curr;
 			distance[rowIndex+1][colIndex] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
 			if (usesEuclidean) {
@@ -64,7 +64,7 @@ public class StaticGenAndSearch {
 			}
 			fringe.add(map[rowIndex+1][colIndex]);
 		}
-		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && map[rowIndex][colIndex+1].prev == null && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !map[rowIndex][colIndex+1].isOnFire && map[rowIndex][colIndex+1].prev == null && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
 			map[rowIndex][colIndex+1].prev = curr;
 			distance[rowIndex][colIndex+1] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
 			if (usesEuclidean) {
@@ -74,7 +74,7 @@ public class StaticGenAndSearch {
 			}
 			fringe.add(map[rowIndex][colIndex+1]);
 		}
-		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && map[rowIndex-1][colIndex].prev == null && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !map[rowIndex-1][colIndex].isOnFire && map[rowIndex-1][colIndex].prev == null && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
 			map[rowIndex-1][colIndex].prev = curr;
 			distance[rowIndex-1][colIndex] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
 			if (usesEuclidean) {//Euclidean distance is the heuristic
@@ -84,7 +84,7 @@ public class StaticGenAndSearch {
 			}
 			fringe.add(map[rowIndex-1][colIndex]);
 		}
-		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && map[rowIndex][colIndex-1].prev == null && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !map[rowIndex][colIndex-1].isOnFire && map[rowIndex][colIndex-1].prev == null && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
 			map[rowIndex][colIndex-1].prev = curr;
 			distance[rowIndex][colIndex-1] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
 			if (usesEuclidean) {
@@ -642,7 +642,7 @@ public class StaticGenAndSearch {
 		//obstructions block the fire
 		for (int i = 0; i < map.length; i++) {
 			for (int j = 0; j < map.length; j++) {
-				int numNbrFire = 0; //k = number of neighbors on fire
+				int numNbrFire = 0;
 				if (!map[i][j].isEmpty || map[i][j].isOnFire) {
 					continue;
 				}
@@ -676,6 +676,116 @@ public class StaticGenAndSearch {
 		return map;
 	}
 	
+	//Method to implement Strategy 1: compute shortest path to goal at the start of the maze and move towards goal, ignoring fire movement
+	//Initial shortest path is generated with A* Manhattan Distance and takes into account the initial position of the fire
+	//initialFireMap must be solvable initially
+	//You make the first move, fire makes the second move
+	//Exit the maze or burn
+	public static PathNode ignoreFireSpreading (PathNode [][] initialFireMap, double flammabilityOfFire) {
+		PathNode currentPosition = initialFireMap[0][0]; //start at starting position
+		PathNode manhattanAStarFireSoln = AStar(initialFireMap, false);
+		//need to add loop that iterates fire and person moves until failure or success
+		while (!currentPosition.equals(manhattanAStarFireSoln)) { //while have not reached goal yet
+			
+		}
+		
+	}
+	
+	//Method to implement Strategy 2: recompute shortest path to goal every time fire moves
+	//Initial shortest path is generated with A* Manhattan Distance and takes into account the initial position of the fire
+	//You make the first move, fire makes the second move
+	//If you burn or can't reach the goal anymore, you die
+	public static PathNode avoidFireSpreading (PathNode [][] newFireMap, double flammabilityOfFire) {
+		PathNode currentPosition = newFireMap[0][0];
+		PathNode manhattanAStarFireSoln = AStar(newFireMap, false);
+		//need to add loop that iterates fire and person moves until failure or success
+		while (!currentPosition.equals(manhattanAStarFireSoln)) { //while have not reached goal yet
+			
+		}
+	}
+	
+	//helper method to find the location of the initial fire
+	public static PathNode findInitialFire (PathNode [][] initialFireMap) { //throw illegal argument exception???
+		if (initialFireMap) //any way to initially check if map being passed in is a firemap
+		for (int i = 0; i < initialFireMap.length; i++) {
+			for (int j = 0; j < initialFireMap.length; j++) {
+				if (initialFireMap[i][j].isOnFire) {
+					return initialFireMap[i][j];
+				}
+			}
+		}
+		System.out.println("No initial fire found");
+		return null;
+	}
+	
+	
+	// Creates the dataset needed to plot density against fire maze solvability. To ensure a relatively
+	// smooth curve, there are data points at 0.02 increments from q = 0.02 to q = 1.0. Each data point
+	// is computed by generating 1000 mazes at that q value, solving each one of them, and counting 
+	// the number of the total mazes that return solutions. That value is divided by 1000 to get the
+	// decimal value of solvability between 0 and 1.
+	public static DefaultXYDataset fireMazeSolvability () {
+		DefaultXYDataset data = new DefaultXYDataset();
+		double[][] ignoreFireData = new double[2][50];
+		double[][] avoidFireData = new double[2][50];
+		
+		for (int q = 1; q < 51; q++) {
+			int numIgnoreFireSolved = 0;
+			int numAvoidFireSolved = 0;
+			
+			for (int trial = 0; trial < 1000; trial++) {
+				PathNode [][] testMap = generateMap(100, 0.28, true);
+				PathNode initialFire = findInitialFire(testMap);
+				initialFire.isOnFire = false; //temporarily set it to false so A* can find path between start and initial fire
+				PathNode manhattanAStarFireSoln = AStar(testMap, false);
+				while (manhattanAStarFireSoln == null) { //if there is no initial path between fire and start, ignore maze and create a new maze
+					testMap = generateMap(100, 0.28, true);
+					initialFire = findInitialFire(testMap);
+					initialFire.isOnFire = false;
+					manhattanAStarFireSoln = AStar(testMap, false);
+				}
+				initialFire.isOnFire = true;
+				
+				PathNode ignoreFireSoln = ignoreFireSpreading (testMap, 0.02*q); //use AStar Manhattan distance
+				if (ignoreFireSoln != null) {
+					numIgnoreFireSolved++;
+				}
+				resetMap(testMap);
+				
+				PathNode avoidFireSoln = avoidFireSpreading (testMap, 0.02*q); //use AStar Manhattan distance
+				if (avoidFireSoln != null) {
+					numAvoidFireSolved++;
+				}
+				resetMap(testMap);
+			}
+			
+			ignoreFireData[0][q] = 0.02*q;
+			ignoreFireData[1][q] = (numIgnoreFireSolved/1000.0);
+			avoidFireData[0][q] = 0.02*q;
+			avoidFireData[1][q] = (numAvoidFireSolved/1000.0);
+		}
+		data.addSeries("Ignore Fire Stratgey", ignoreFireData);
+		data.addSeries("Avoid Fire Stratgey", avoidFireData);
+		return data;
+	}
+	
+	// When called from main, generates a line plot between density (p) on the x-axis and 
+	// a decimal value between 0 and 1 representing the probability that a randomly generated maze
+	// with density p will be solved. Plots are generated for all the different algorithms
+	// explored in this project, and the probability of being solved is generated based on sample
+	// sizes of 100 mazes for each data point.
+	public static void plotFireMazeSolvability() {
+		ApplicationFrame solvabilityPlotApp = new ApplicationFrame("Maze Solvability Window");
+		JFreeChart solvabilityPlot = ChartFactory.createXYLineChart("Maze Solvability at Different Flammabilities", "Density (q)", "Fraction Solved", mazeSolvability(), PlotOrientation.VERTICAL, true, true, false);
+		ChartPanel chartPanel = new ChartPanel(solvabilityPlot);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
+		solvabilityPlotApp.setContentPane(chartPanel);
+		solvabilityPlotApp.pack();
+		RefineryUtilities.centerFrameOnScreen(solvabilityPlotApp);
+		solvabilityPlotApp.setVisible(true);
+	}
+	
+	
 	// Allows for a single maze to be generated with density (p) set to the specified
 	// parameter. Then, all of the algorithms for solving static mazes implemented in this
 	// project are called on the same maze and their results displayed on the GUI.
@@ -705,14 +815,14 @@ public class StaticGenAndSearch {
 	public static void main(String[] args) {
 		
 
-	/*	PathNode[][] fireMap = generateMap(100, 0.5, true);
+		PathNode[][] fireMap = generateMap(100, 0.1, true);
 		printMap(fireMap);
 		System.out.println();
-		PathNode fireGoal = fireMap[fireMap.length-1][fireMap.length-1];
+		PathNode fireGoal = AStar(fireMap, true);
 		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search");
 		fireSpreads(fireMap, 1.0);
 
-		dimTester();
+		/* dimTester();
 		
 		
 		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search"); 
@@ -746,9 +856,9 @@ public class StaticGenAndSearch {
 		regMap = getHardestMaze(regMap2, false);
 		printMazeSolutionGUI(regMap2, null, "DFS - hardest maze");
 		System.out.println("Max fringe size on the hardest maze: " + maxFringeSize);*/
-		PathNode[][] theHardest = findHardestPLevel(100, true);
-		printMazeSolutionGUI(theHardest, null, "DFS - hardest maze");
-		System.out.println("Size of fringe on the hardest maze: " + maxFringeSize);
+//		PathNode[][] theHardest = findHardestPLevel(100, true);
+//		printMazeSolutionGUI(theHardest, null, "DFS - hardest maze");
+//		System.out.println("Size of fringe on the hardest maze: " + maxFringeSize);
 	}
 
 }
