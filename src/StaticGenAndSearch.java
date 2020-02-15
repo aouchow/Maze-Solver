@@ -216,11 +216,11 @@ public class StaticGenAndSearch {
 		fringe.add(map[0][0]);
 		maxFringeSize = Math.max(maxFringeSize, fringe.size());
 		while (!fringe.isEmpty()) {
-			cellsTraversed++;
 			PathNode curr = fringe.getFirst();
 			fringe.remove(); //removes first element from list
 			if (visited[curr.row][curr.col]) continue;
 			visited[curr.row][curr.col] = true; //mark node as visited
+			cellsTraversed++;
 			if (curr.equals(map[map.length-1][map.length-1])) { //curr is the goal state
 				return curr;
 			}else{
@@ -310,7 +310,8 @@ public class StaticGenAndSearch {
 			// If we get here, then both BFS's were run for one step and neither intersected the other's fringe
 			fringeFromStart.remove(fringeFromStart.iterator().next()); // Removes first node from the start fringe that we just processed
 			fringeFromGoal.remove(fringeFromGoal.iterator().next()); // Removes first node from the goal fringe that we just processed
-			
+			// Update maximum fringe size with the larger value: sum of the fringes vs current max fringe size
+			maxFringeSize = Math.max(maxFringeSize, fringeFromStart.size() + fringeFromGoal.size());
 		}
 		return null;
 	}
@@ -321,6 +322,7 @@ public class StaticGenAndSearch {
 	public static PathNode helperBFS (PathNode [][] map, boolean [][] visited, LinkedHashSet <PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe) {
 		PathNode curr = expandFringe.iterator().next(); // We are visiting the first node on the fringe
 		if (!visited [curr.row][curr.col]) { // This should always be true, because nodes added to the fringe are checked to not have already been visited.
+			cellsTraversed++;
 			visited [curr.row][curr.col] = true;
 			PathNode intersect = updateFringeBDBFS(expandFringe, intersectFringe, map, curr, visited);
 			return intersect;
@@ -377,7 +379,7 @@ public class StaticGenAndSearch {
 		cells[map.length-1][map.length-1].add(goalLabel);
 		
 		while (goal != null) {
-			cells[goal.row][goal.col].setBackground(Color.LIGHT_GRAY);
+			cells[goal.row][goal.col].setBackground(Color.BLUE);
 			goal = goal.prev;
 		}
 		
@@ -452,26 +454,7 @@ public class StaticGenAndSearch {
 			manhattanData[1][p] = (numManhattanSolved/1000.0);
 			
 		}
-		/*System.out.println("DFS Data: ");
-		for (int i = 0; i < dfsData[0].length; i++) {
-			System.out.println("p: " + dfsData[0][i] + " Solvability: " + dfsData[1][i]);
-		}
-		System.out.println("BFS Data: ");
-		for (int i = 0; i < bfsData[0].length; i++) {
-			System.out.println("p: " + bfsData[0][i] + " Solvability: " + bfsData[1][i]);
-		}
-		System.out.println("BD BFS Data: ");
-		for (int i = 0; i < bfsData[0].length; i++) {
-			System.out.println("p: " + bdbfsData[0][i] + " Solvability: " + bdbfsData[1][i]);
-		}
-		System.out.println("Euclid A* Data: ");
-		for (int i = 0; i < dfsData[0].length; i++) {
-			System.out.println("p: " + euclidData[0][i] + " Solvability: " + euclidData[1][i]);
-		}
-		System.out.println("Manhattan A* Data: ");
-		for (int i = 0; i < manhattanData[0].length; i++) {
-			System.out.println("p: " + manhattanData[0][i] + " Solvability: " + manhattanData[1][i]);
-		}*/
+		
 		data.addSeries("A*-Manhattan", manhattanData);
 		data.addSeries("DFS", dfsData);
 		data.addSeries("BFS", bfsData);
@@ -496,20 +479,218 @@ public class StaticGenAndSearch {
 		solvabilityPlotApp.setVisible(true);
 	}
 	
+	public static DefaultXYDataset shortestPath() {
+		DefaultXYDataset averagePathLengths = new DefaultXYDataset();
+		
+		double[][] pathLengthData = new double[2][42];
+		
+		for (int p = 0; p < 42; p++) {
+			int totalLength = 0;
+			for (int trial = 0; trial < 1000; trial++) {
+				PathNode [][] testMap = generateMap(100, 0.01*p, false);
+				int length = 0;
+			
+				PathNode manhattanAStarSoln = AStar(testMap, false);
+				while (manhattanAStarSoln == null) {
+					testMap = generateMap(100, 0.01*p, false);
+					manhattanAStarSoln = AStar(testMap, false);
+				}
+				
+				while (manhattanAStarSoln != null) {
+					length++;
+					manhattanAStarSoln = manhattanAStarSoln.prev;
+				}
+				//System.out.println("Trial: " + trial);
+				//System.out.println("Length: " + length);
+				totalLength += length;
+				
+			}
+			System.out.println("p: " + p*0.01);
+			System.out.println("Avg Shortest Path Length: " + (totalLength/1000.0));
+			pathLengthData[0][p] = p*0.01;
+			pathLengthData[1][p] = totalLength/1000.0;
+		}
+		averagePathLengths.addSeries("Average Path Lengths with A*-Manhattan", pathLengthData);
+		
+		return averagePathLengths;
+	}
+	
+	public static void plotShortestPaths() {
+		ApplicationFrame shortestPathsPlotApp = new ApplicationFrame("Shortest Paths (With A*-Manhattan) Window");
+		JFreeChart shortestPathsPlot = ChartFactory.createXYLineChart("Shortest Paths (Using A*-Manhattan) as a Function of Density (p)", "Density (p)", "Average Length of Shortest Path (# of cells)", shortestPath(), PlotOrientation.VERTICAL, true, true, false);
+		ChartPanel chartPanel = new ChartPanel(shortestPathsPlot);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
+		shortestPathsPlotApp.setContentPane(chartPanel);
+		shortestPathsPlotApp.pack();
+		RefineryUtilities.centerFrameOnScreen(shortestPathsPlotApp);
+		shortestPathsPlotApp.setVisible(true);
+	}
+	
+	public static DefaultXYDataset avgNodesExpanded() {
+		DefaultXYDataset nodesExpanded = new DefaultXYDataset();
+		
+		double[][] bfsNodes = new double[2][41];
+		double[][] dfsNodes = new double[2][41];
+		double[][] bdBFSNodes = new double[2][41];
+		double[][] numEuclidNodes = new double[2][41];
+		double[][] numManhattanNodes = new double[2][41];
+		
+		for (int p = 0; p < 41; p++) {
+			int totalEuclidNodes = 0, totalManhattanNodes = 0, totalBFSNodes = 0, totalDFSNodes = 0, totalbdBFSNodes = 0;
+			for (int trial = 0; trial < 1000; trial++) {
+				PathNode[][] testMap = generateMap(100, 0.01*p, false);
+				
+				cellsTraversed = 0;
+				PathNode AStarEuclid = AStar(testMap, true);
+				while (AStarEuclid == null) {
+					System.out.println("Generated unsolvable map, trying again.");
+					cellsTraversed = 0;
+					testMap = generateMap(100, 0.01*p, false);
+					AStarEuclid = AStar(testMap, true);
+				}
+				System.out.println("Trial: " + trial);
+				System.out.println("Number of Euclid Nodes: " + cellsTraversed);
+				totalEuclidNodes += cellsTraversed;
+				
+				resetMap(testMap);
+				cellsTraversed = 0;
+				PathNode AStarManhattan = AStar(testMap, false);
+				System.out.println("Number of Manhattan Nodes: " + cellsTraversed);
+				totalManhattanNodes += cellsTraversed;
+				
+				resetMap(testMap);
+				cellsTraversed = 0;
+				PathNode bfs = BreadthFirstSearch(testMap);
+				System.out.println("Number of BFS Nodes: " + cellsTraversed);
+				totalBFSNodes += cellsTraversed;
+				
+				resetMap(testMap);
+				cellsTraversed = 0;
+				PathNode dfs = DepthFirstSearch(testMap);
+				System.out.println("Number of DFS Nodes: " + cellsTraversed);
+				totalDFSNodes += cellsTraversed;
+				
+				resetMap(testMap);
+				cellsTraversed = 0;
+				PathNode bdBFS = bidirectionalBFS(testMap);
+				System.out.println("Number of Bidirectional BFS Nodes: " + cellsTraversed);
+				totalbdBFSNodes += cellsTraversed;
+			}
+			dfsNodes[0][p] = 0.01*p;
+			dfsNodes[1][p] = totalDFSNodes/1000.0;
+			System.out.println("p: " + dfsNodes[0][p]);
+			System.out.println("Avg Euclid Nodes: " + dfsNodes[1][p]);
+			
+			bfsNodes[0][p] = 0.01*p;
+			bfsNodes[1][p] = totalBFSNodes/1000.0;
+			System.out.println("p: " + bfsNodes[0][p]);
+			System.out.println("Avg Euclid Nodes: " + bfsNodes[1][p]);
+			
+			bdBFSNodes[0][p] = 0.01*p;
+			bdBFSNodes[1][p] = totalbdBFSNodes/1000.0;
+			System.out.println("p: " + bdBFSNodes[0][p]);
+			System.out.println("Avg Euclid Nodes: " + bdBFSNodes[1][p]);
+			
+			numEuclidNodes[0][p] = 0.01*p;
+			numEuclidNodes[1][p] = totalEuclidNodes/1000.0;
+			System.out.println("p: " + numEuclidNodes[0][p]);
+			System.out.println("Avg Euclid Nodes: " + numEuclidNodes[1][p]);
+			
+			numManhattanNodes[0][p] = 0.01*p;
+			numManhattanNodes[1][p] = totalManhattanNodes/1000.0;
+			System.out.println("Avg Manhattan Nodes: " + numManhattanNodes[1][p]);
+		}
+		
+		nodesExpanded.addSeries("BFS", bfsNodes);
+		nodesExpanded.addSeries("DFS", dfsNodes);
+		nodesExpanded.addSeries("Bidirectional BFS", bdBFSNodes);
+		nodesExpanded.addSeries("A*-Euclidean", numEuclidNodes);
+		nodesExpanded.addSeries("A*-Manhattan", numManhattanNodes);
+		
+		return nodesExpanded;
+	}
+	
+	public static void plotExpandedNodes() {
+		ApplicationFrame expandedNodesApp = new ApplicationFrame("Average Number of Nodes Expanded Window");
+		JFreeChart expandedNodesPlot = ChartFactory.createXYLineChart("Avg Number of Nodes Expanded", "Density (p)", "Avg Number of Nodes Expanded", avgNodesExpanded(), PlotOrientation.VERTICAL, true, true, false);
+		ChartPanel chartPanel = new ChartPanel(expandedNodesPlot);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
+		expandedNodesApp.setContentPane(chartPanel);
+		expandedNodesApp.pack();
+		RefineryUtilities.centerFrameOnScreen(expandedNodesApp);
+		expandedNodesApp.setVisible(true);
+	}
+	
+	public static DefaultXYDataset avgAStarNodes() {
+		DefaultXYDataset AStarNodes = new DefaultXYDataset();
+		
+		double[][] numEuclidNodes = new double[2][41];
+		double[][] numManhattanNodes = new double[2][41];
+		
+		for (int p = 0; p < 41; p++) {
+			int totalEuclidNodes = 0, totalManhattanNodes = 0;
+			for (int trial = 0; trial < 1000; trial++) {
+				PathNode[][] testMap = generateMap(100, 0.01*p, false);
+				
+				cellsTraversed = 0;
+				PathNode AStarEuclid = AStar(testMap, true);
+				while (AStarEuclid == null) {
+					System.out.println("Generated unsolvable map, trying again.");
+					cellsTraversed = 0;
+					testMap = generateMap(100, 0.01*p, false);
+					AStarEuclid = AStar(testMap, true);
+				}
+				System.out.println("Trial: " + trial);
+				System.out.println("Number of Euclid Nodes: " + cellsTraversed);
+				totalEuclidNodes += cellsTraversed;
+				
+				resetMap(testMap);
+				cellsTraversed = 0;
+				PathNode AStarManhattan = AStar(testMap, false);
+				System.out.println("Number of Manhattan Nodes: " + cellsTraversed);
+				totalManhattanNodes += cellsTraversed;
+				
+			}
+			numEuclidNodes[0][p] = 0.01*p;
+			numEuclidNodes[1][p] = totalEuclidNodes/1000.0;
+			System.out.println("p: " + numEuclidNodes[0][p]);
+			System.out.println("Avg Euclid Nodes: " + numEuclidNodes[1][p]);
+			
+			numManhattanNodes[0][p] = 0.01*p;
+			numManhattanNodes[1][p] = totalManhattanNodes/1000.0;
+			System.out.println("Avg Manhattan Nodes: " + numManhattanNodes[1][p]);
+		}
+		AStarNodes.addSeries("A*-Euclidean", numEuclidNodes);
+		AStarNodes.addSeries("A*-Manhattan", numManhattanNodes);
+		
+		return AStarNodes;
+		
+	}
+	
+	public static void plotAvgAStarNodes() {
+		ApplicationFrame avgAStarNodesApp = new ApplicationFrame("Average Number of Nodes Expanded by A* Window");
+		JFreeChart avgAStarNodesPlot = ChartFactory.createXYLineChart("Avg Number of Nodes Expanded by A*", "Density (p)", "Avg Number of Nodes Expanded", avgAStarNodes(), PlotOrientation.VERTICAL, true, true, false);
+		ChartPanel chartPanel = new ChartPanel(avgAStarNodesPlot);
+		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
+		avgAStarNodesApp.setContentPane(chartPanel);
+		avgAStarNodesApp.pack();
+		RefineryUtilities.centerFrameOnScreen(avgAStarNodesApp);
+		avgAStarNodesApp.setVisible(true);
+	}
 	
 	public static void dimTester() {
-		for (int i = 10; i < 11; i++) {
+		for (int i = 100; i < 101; i++) {
 			cellsTraversed = 0;
 			maxFringeSize = 0;
-			PathNode[][] testMap = generateMap(i, 0.25, false);
+			PathNode[][] testMap = generateMap(i, 0.2, false);
 			long startTime = System.nanoTime();
 			PathNode goal = BreadthFirstSearch(testMap);
 			long endTime = System.nanoTime();
 			long executionTime = endTime - startTime;
 			printMazeSolutionGUI(testMap, goal, "BFS");
-			System.out.println("Time elapsed for DFS to solve dim = " + i + " maze with p = 0.5: " + (executionTime/1000000000.0));
-			System.out.println("Total number of cells traversed by DFS with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
-			System.out.println("Maximum fringe size using DFS with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
+			System.out.println("Time elapsed for BFS to solve dim = " + i + " maze with p = 0.2: " + (executionTime/1000000000.0));
+			System.out.println("Total number of cells traversed by BFS with dim = " + i + " maze with p = 0.2: " + cellsTraversed);
+			System.out.println("Maximum fringe size using BFS with dim = " + i + " maze with p = 0.2: " + maxFringeSize);
 			System.out.println();
 			cellsTraversed = 0;
 			maxFringeSize = 0;
@@ -520,8 +701,8 @@ public class StaticGenAndSearch {
 			}
 			PathNode secondGoal = AStar(testMap, false);
 			printMazeSolutionGUI(testMap, secondGoal, "A*-Manhattan");
-			System.out.println("Total number of cells traversed by A* with dim = " + i + " maze with p = 0.5: " + cellsTraversed);
-			System.out.println("Maximum fringe size using A* with dim = " + i + " maze with p = 0.5: " + maxFringeSize);
+			System.out.println("Total number of cells traversed by A* with dim = " + i + " maze with p = 0.2: " + cellsTraversed);
+			System.out.println("Maximum fringe size using A* with dim = " + i + " maze with p = 0.2: " + maxFringeSize);
 			System.out.println();
 		}
 	}
@@ -572,26 +753,87 @@ public class StaticGenAndSearch {
 	// parameter. Then, all of the algorithms for solving static mazes implemented in this
 	// project are called on the same maze and their results displayed on the GUI.
 	public static void pathsForAllAlgorithms(double p) {
-		PathNode[][] testMap = generateMap(100, p, false);
+		PathNode bfsGoal, dfsGoal, bidirectBFSGoal, euclidGoal, manhattanGoal = null;
+		do {
+			PathNode[][] testMap = generateMap(100, p, false);
+			PathNode goal = null;
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			dfsGoal = DepthFirstSearch(testMap);
+			printMazeSolutionGUI(testMap, dfsGoal, "DFS");
+			System.out.println("DFS expanded " + cellsTraversed + " nodes for this maze.");
+			System.out.println("The maximum fringe size of DFS for this maze was " + maxFringeSize + " nodes.");
+			int length = 0;
+			goal = dfsGoal;
+			while (goal != null) {
+				length++;
+				goal = goal.prev;
+			}
+			System.out.println("The length of the path returned by DFS is: " + length);
+			resetMap(testMap);
+			
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			bfsGoal = BreadthFirstSearch(testMap);
+			printMazeSolutionGUI(testMap, bfsGoal, "BFS");
+			System.out.println("BFS expanded " + cellsTraversed + " nodes for this maze.");
+			System.out.println("The maximum fringe size of BFS for this maze was " + maxFringeSize + " nodes.");
+			length = 0;
+			goal = bfsGoal;
+			while (goal != null) {
+				length++;
+				goal = goal.prev;
+			}
+			System.out.println("The length of the path returned by BFS is: " + length);
+			resetMap(testMap);
+			
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			bidirectBFSGoal = bidirectionalBFS(testMap);
+			printMazeSolutionGUI(testMap, bidirectBFSGoal, "Bidirectional BFS");
+			System.out.println("Bidirectional BFS expanded " + cellsTraversed + " nodes for this maze.");
+			System.out.println("The maximum total fringe size for both fringes in bidirectional BFS for this maze was " + maxFringeSize + " nodes.");
+			length = 0;
+			goal = bidirectBFSGoal;
+			while (goal != null) {
+				length++;
+				goal = goal.prev;
+			}
+			System.out.println("The length of the path returned by bidirectional BFS is: " + length);
+			resetMap(testMap);
+			
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			euclidGoal = AStar(testMap, true);
+			printMazeSolutionGUI(testMap, euclidGoal, "A*-Euclidean");
+			System.out.println("A* with the Euclidean distance as the heuristic expanded " + cellsTraversed + " nodes for this maze.");
+			System.out.println("The maximum fringe size of A* with the Euclidean distance heuristic for this maze was " + maxFringeSize + " nodes.");
+			length = 0;
+			goal = euclidGoal;
+			while (goal != null) {
+				length++;
+				goal = goal.prev;
+			}
+			System.out.println("The length of the path returned by A*-Euclidean is: " + length);
+			resetMap(testMap);
+			
+			cellsTraversed = 0;
+			maxFringeSize = 0;
+			manhattanGoal = AStar(testMap, false);
+			System.out.println("A* with the Manhattan distance as the heuristic expanded " + cellsTraversed + " nodes for this maze.");
+			System.out.println("The maximum fringe size of A* with the Manhattan distance heuristic for this maze was " + maxFringeSize + " nodes.");
+			length = 0;
+			goal = manhattanGoal;
+			while (goal != null) {
+				length++;
+				goal = goal.prev;
+			}
+			System.out.println("The length of the path returned by A*-Manhattan is: " + length);
+			printMazeSolutionGUI(testMap, manhattanGoal, "A*-Manhattan");
+			resetMap(testMap);
+			
+		} while (bfsGoal == null || dfsGoal == null || bidirectBFSGoal == null || euclidGoal == null || manhattanGoal == null);
 		
-		PathNode dfsGoal = DepthFirstSearch(testMap);
-		printMazeSolutionGUI(testMap, dfsGoal, "DFS");
-		resetMap(testMap);
-		
-		PathNode bfsGoal = BreadthFirstSearch(testMap);
-		printMazeSolutionGUI(testMap, bfsGoal, "BFS");
-		resetMap(testMap);
-		
-		PathNode bidirectBFSGoal = bidirectionalBFS(testMap);
-		printMazeSolutionGUI(testMap, bidirectBFSGoal, "Bidirectional BFS");
-		resetMap(testMap);
-		
-		PathNode euclidGoal = AStar(testMap, true);
-		printMazeSolutionGUI(testMap, euclidGoal, "A*-Euclidean");
-		resetMap(testMap);
-		
-		PathNode manhattanGoal = AStar(testMap, false);
-		printMazeSolutionGUI(testMap, manhattanGoal, "A*-Manhattan");
 	}
 	
 	public static void main(String[] args) {
@@ -605,7 +847,9 @@ public class StaticGenAndSearch {
 		
 		//plotMazeSolvability();
 		pathsForAllAlgorithms(0.2);
-		
+		//plotAvgAStarNodes();
+		//plotShortestPaths();
+		//plotExpandedNodes();
 		/*PathNode[][] testMap = generateMap(11, 0.22, false);
 		printMap(testMap);
 		System.out.println();
