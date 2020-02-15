@@ -264,6 +264,7 @@ public class StaticGenAndSearch {
 	
 	//this method is called when AStar is repeatedly called to recalculate route to goal wh
 	public static PathNode AStarWithNewStart (PathNode start, PathNode[][]map, boolean usesEuclidean) {
+		System.out.println("AStarWithNewStart start: (" + start.row + ", " + start.col + ")");
 		if (map == null || map[0] == null || map[0].length == 0) return null;  //map isn't constructed in a valid way
 		boolean[][] visited = new boolean[map.length][map.length];
 		int[][]distance = new int[map.length][map.length]; //distance (# of operations) from start to PathNode at distance[i][j]
@@ -1171,7 +1172,7 @@ public class StaticGenAndSearch {
 //		System.out.println();
 		PathNode fireGoal = AStarWithNewStart(fireMap[0][0], fireMap, true);
 		printMazeSolutionGUI(fireMap, fireGoal, fireMap[0][0], "Adversarial Search");
-		boolean success = avoidFireSpreading (fireMap, fireGoal, 0.5);
+		boolean success = ignoreFireSpreading (fireMap, fireGoal, 0.5);
 		System.out.println("!!!!!" + success + "!!!!!");
 //		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
 //		fireSpreads(fireMap, 1.0);
