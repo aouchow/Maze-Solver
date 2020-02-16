@@ -1193,48 +1193,112 @@ public static DefaultXYDataset mazeSolvability() {
 	}
  
 	//this for strategy 3 for fire maze
-	public static PriorityQueue <PathNode> updatePredictiveHeuristic (PathNode [][] map, PathNode curr, PathNode goal, PriorityQueue<PathNode> fringe) {
+	public static PriorityQueue <PathNode> updatePredictiveHeuristic (PathNode [][] map, boolean [][] visited, double [][] probabilities, int[][]distance, PathNode curr, PathNode goal, PriorityQueue<PathNode> fringe) {
 		int rowIndex = curr.row;
 		int colIndex = curr.col;
-		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !map[rowIndex+1][colIndex].isOnFire && map[rowIndex+1][colIndex].prev == null) {
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !map[rowIndex+1][colIndex].isOnFire && map[rowIndex+1][colIndex].prev == null  && !visited[rowIndex+1][colIndex]) {
 			map[rowIndex+1][colIndex].prev = curr;
-			map[rowIndex+1][colIndex].distanceEst = Math.abs(((rowIndex+1)-(goal.row)) + (colIndex-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			double euclDis = Math.sqrt((Math.pow((rowIndex+1)-(map.length-1), 2)) + (Math.pow((colIndex)-(map.length-1), 2)));
+			double manDis = Math.abs(((rowIndex+1)-(goal.row)) + (colIndex-(goal.col)));
+			if (euclDis * probabilities[rowIndex+1][colIndex] + euclDis < manDis) {
+				map[rowIndex+1][colIndex].distanceEst = distance[rowIndex+1][colIndex] + (euclDis * probabilities[rowIndex+1][colIndex]) + euclDis;
+			}
+			else {
+				map[rowIndex+1][colIndex].distanceEst = distance[rowIndex+1][colIndex] + manDis;
+			}
 			fringe.add(map[rowIndex+1][colIndex]);
 		}
-		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !map[rowIndex][colIndex+1].isOnFire && map[rowIndex][colIndex+1].prev == null) {
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !map[rowIndex][colIndex+1].isOnFire && map[rowIndex][colIndex+1].prev == null  && !visited[rowIndex][colIndex+1]) {
 			map[rowIndex][colIndex+1].prev = curr;
-			map[rowIndex][colIndex+1].distanceEst = Math.abs(((rowIndex)-(goal.row)) + ((colIndex+1)-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			double euclDis = Math.sqrt((Math.pow((rowIndex)-(map.length-1), 2)) + (Math.pow((colIndex+1)-(map.length-1), 2)));
+			double manDis = Math.abs(((rowIndex)-(goal.row)) + (colIndex+1-(goal.col)));
+			if (euclDis * probabilities[rowIndex][colIndex+1] + euclDis < manDis) {
+				map[rowIndex][colIndex+1].distanceEst = distance[rowIndex][colIndex+1] + (euclDis * probabilities[rowIndex][colIndex+1]) + euclDis;
+			}
+			else {
+				map[rowIndex][colIndex+1].distanceEst = distance[rowIndex][colIndex+1] + manDis;
+			}
 			fringe.add(map[rowIndex][colIndex+1]);
 		}
-		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !map[rowIndex-1][colIndex].isOnFire && map[rowIndex-1][colIndex].prev == null) {
+		if (rowIndex-1 > map.length && map[rowIndex-1][colIndex].isEmpty && !map[rowIndex-1][colIndex].isOnFire && map[rowIndex-1][colIndex].prev == null  && !visited[rowIndex-1][colIndex]) {
 			map[rowIndex-1][colIndex].prev = curr;
-			map[rowIndex-1][colIndex].distanceEst = Math.abs(((rowIndex-1)-(goal.row)) + (colIndex-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			double euclDis = Math.sqrt((Math.pow((rowIndex-1)-(map.length-1), 2)) + (Math.pow((colIndex)-(map.length-1), 2)));
+			double manDis = Math.abs(((rowIndex-1)-(goal.row)) + (colIndex-(goal.col)));
+			if (euclDis * probabilities[rowIndex-1][colIndex] + euclDis < manDis) {
+				map[rowIndex-1][colIndex].distanceEst = distance[rowIndex-1][colIndex] + (euclDis * probabilities[rowIndex-1][colIndex]) + euclDis;
+			}
+			else {
+				map[rowIndex-1][colIndex].distanceEst = distance[rowIndex-1][colIndex] + manDis;
+			}
 			fringe.add(map[rowIndex-1][colIndex]);
 		}
-		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !map[rowIndex][colIndex-1].isOnFire && map[rowIndex][colIndex-1].prev == null) {
+		if (colIndex-1 > map.length && map[rowIndex][colIndex-1].isEmpty && !map[rowIndex][colIndex-1].isOnFire && map[rowIndex][colIndex-1].prev == null  && !visited[rowIndex][colIndex-1]) {
 			map[rowIndex][colIndex-1].prev = curr;
-			map[rowIndex][colIndex-1].distanceEst = Math.abs(((rowIndex)-(goal.row)) + ((colIndex-1)-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			double euclDis = Math.sqrt((Math.pow((rowIndex)-(map.length-1), 2)) + (Math.pow((colIndex-1)-(map.length-1), 2)));
+			double manDis = Math.abs(((rowIndex)-(goal.row)) + (colIndex-1-(goal.col)));
+			if (euclDis * probabilities[rowIndex][colIndex-1] + euclDis < manDis) {
+				map[rowIndex][colIndex-1].distanceEst = distance[rowIndex][colIndex-1] + (euclDis * probabilities[rowIndex][colIndex-1]) + euclDis;
+			}
+			else {
+				map[rowIndex][colIndex-1].distanceEst = distance[rowIndex][colIndex-1] + manDis;
+			}
 			fringe.add(map[rowIndex][colIndex-1]);
 		}
 		return fringe;
 	}
  
-    public static PathNode AStarPredict(PathNode [][] map, double [][] probabilities, double flammabilityOfFire) throws Exception {
-        boolean success = true;
+    public static PathNode AStarPredict(PathNode [][] map, double flammabilityOfFire, PathNode start, PathNode goal) {
+		boolean[][] visited = new boolean[map.length][map.length];
+		int[][]distance = new int[map.length][map.length];
+		double[][] probabilities = computeFireProbability (map, flammabilityOfFire);
+		
         PriorityQueue <PathNode> fringe = new PriorityQueue<PathNode>();
-		fringe.add(map[0][0]);
+		fringe.add(start);
+		start.prev = null;
+		start.distanceEst = 0;
 		while (!fringe.isEmpty()) {
 			PathNode curr = fringe.poll();
-			if (curr == map[map.length-1][map.length-1]) {
+			visited[curr.row][curr.col] = true;
+			if (curr == goal) {
 				return curr;
 			}
-			fringe = updatePredictiveHeuristic(map, curr, map[map.length-1][map.length-1], fringe);
+			fringe = updatePredictiveHeuristic(map, visited, probabilities, distance, curr, goal, fringe);
 		}
 		return null;
     }
     
-    public static boolean predictFire (PathNode [][] newFireMap, PathNode goal, double flammabilityOfFire) {
-    	return true;
+
+
+    public static boolean predictFire (PathNode [][] newFireMap, PathNode goal, double flammabilityOfFire) throws Exception {
+		boolean success = true;
+		if (goal == null) {
+			throw new Exception ("maze is not initially solvable");
+		}
+		LinkedList<PathNode> path = generateSolvedPath(goal, null);
+		PathNode currentPosition = path.pop(); //start at starting position
+		while (currentPosition != newFireMap[newFireMap.length - 1][newFireMap.length - 1]) { //termination conditions
+			if (currentPosition.isOnFire) {
+				System.out.println("burned");
+				return success = false;
+			}
+			currentPosition = path.pop(); //person makes the first move
+			printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the person
+			fireSpreads(newFireMap, flammabilityOfFire);
+			printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the fire
+			if (currentPosition.isOnFire) { //after fire moves, re-check to see if you've burned
+				System.out.println("burned");
+				return success = false;
+			}
+			resetMap(newFireMap);
+			goal = AStarPredict(newFireMap, flammabilityOfFire, currentPosition, goal);
+			if (goal == null) {
+				System.out.println("no more paths to goal");
+				return success = false;
+			}
+			path = generateSolvedPath(goal, null);
+			currentPosition = path.pop();
+		}
+		return success;
     }
 	
 	// Returns a linked list representation of the solved path from start to goal
@@ -1248,11 +1312,11 @@ public static DefaultXYDataset mazeSolvability() {
 				break;
 			goal = goal.prev;
 		}
-		/*System.out.println();
+		System.out.println();
 		for (int i = 0; i < path.size(); i++) {
 			System.out.print("(" + path.get(i).row + "," + path.get(i).col + ") ");
 		}
-		System.out.println();*/
+		System.out.println();
 
 		return path;
 	}
@@ -1355,15 +1419,15 @@ public static DefaultXYDataset mazeSolvability() {
 		if (fireGoal != null) {
 			initialFire.isOnFire = true;
 			resetMap(fireMap);
-			PathNode initialAStar = AStarForFire(fireMap[0][0], fireMap[fireMap.length-1][fireMap.length-1], fireMap, false);
+			PathNode initialAStar = AStarPredict(fireMap, 0.5, fireMap[0][0], fireMap[fireMap.length-1][fireMap.length-1]);
 			LinkedList<PathNode> path = generateSolvedPath(initialAStar, null);
 			printMazeSolutionGUI(fireMap, initialAStar, fireMap[0][0], "Adversarial Search");
 		} else {
 			System.out.println("Fire cannot reach start.");
 		}
 		
-//		boolean success = ignoreFireSpreading (fireMap, fireGoal, 0.5);
-//		System.out.println("!!!!!" + success + "!!!!!");
+		boolean success = predictFire (fireMap, fireMap[fireMap.length-1][fireMap.length-1], 0.5);
+		System.out.println("!!!!!" + success + "!!!!!");
 //		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
 //		fireSpreads(fireMap, 1.0);
 		
