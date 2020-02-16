@@ -413,22 +413,6 @@ public class StaticGenAndSearch {
 		return null;
 	}
 	
-	public static void printMap(PathNode[][]map) {
-		for (int i = 0; i < map.length; i++) {
-			for (int j = 0; j < map.length; j++) {
-				System.out.print("(" + map[i][j].row + "," + map[i][j].col + ") ");
-				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
-					System.out.print("free");
-				}else if (!map[i][j].isEmpty){
-					System.out.print("occupied");
-				}else if (map[i][j].isOnFire) {
-					System.out.print("fire");
-				}
-				System.out.print("\t");
-			}
-			System.out.println();
-		}
-	}
 	public static PathNode[][] deepCopy(PathNode[][] original) throws CloneNotSupportedException{ //should not throw exception--clone should be supported
 		PathNode[][]copy = new PathNode[original.length][original.length];
 		for (int i = 0; i < copy.length; i++) {
@@ -436,21 +420,25 @@ public class StaticGenAndSearch {
 				copy[i][j] = new PathNode(i, j, original[i][j].isEmpty, false);
 			}
 		}
-		return copy;
+		return copy; //creates a copy of the original which then allows the original to be modified in another function without losing its data
 	}
 	
 	public static PathNode[][] helperFindHardest(PathNode[][] current, boolean usesDFS){ //find the hardest child of the current maze
+		maxFringeSize = 0;
+		cellsTraversed = 0;
+		int mostCellsTraversed = 0;
+		int maxFringe = 0;
 		PathNode[][] hardest = null;
 		if (usesDFS) { //use the # of nodes expanded by DFS as the hardness metric
 			DepthFirstSearch(current);
-			int maxFringe = maxFringeSize; //number of nodes expanded by original maze
+			maxFringe = maxFringeSize; //fringe size of the original maze
 			for (int i = 0; i < current.length; i++) {
 				for (int j = 0; j < current.length; j++) {
 					maxFringeSize = 0;
 					resetMap(current); //allow the current hardest board to be traversed again
 					current[i][j].isEmpty = !current[i][j].isEmpty; //change the occupation status of one node
 					PathNode goal = DepthFirstSearch(current);
-					if (maxFringeSize > maxFringe && goal != null) { //current child is the hardest child thus far
+					if (maxFringeSize > maxFringe && goal != null) { //current child is the hardest child thus far/its fringe is larger than max fringe
 						try {
 							hardest  = deepCopy(current);
 							maxFringe = maxFringeSize;
@@ -461,9 +449,9 @@ public class StaticGenAndSearch {
 					current[i][j].isEmpty = !current[i][j].isEmpty;
 				} 
 			}
-		}else{ //uses A*
+		}else{ //uses A* 
 			AStar(current, false);
-			int mostCellsTraversed = cellsTraversed; //number of nodes expanded by original maze
+			mostCellsTraversed = cellsTraversed; //number of nodes expanded by original maze
 			for (int i = 0; i < current.length; i++) {
 				for (int j = 0; j < current.length; j++) {
 					cellsTraversed = 0;
@@ -482,35 +470,35 @@ public class StaticGenAndSearch {
 				} 
 			}
 		}
-		if (hardest != null) resetMap(hardest); //if a harder maze was found
+		cellsTraversed = mostCellsTraversed;
+		maxFringeSize = maxFringe;
 		return hardest;
 	}
 	
 	public static PathNode[][] getHardestMaze(PathNode[][] original, boolean usesDFS) {//NOTE: when calling, the original maze must be solvable
-		long startTime = System.nanoTime();
 		PathNode[][] prev = null;
-		while (original != null) { //while less than 10 seconds have elapsed
+		while (original != null) { //while the helper function is able to return some harder child of the original maze
 			try {
-				prev = deepCopy(original);
+				prev = deepCopy(original); //copy that harder maze
 			} catch (CloneNotSupportedException e) {
 				e.printStackTrace();
 			}
-			original = helperFindHardest(original, usesDFS);
+			original = helperFindHardest(original, usesDFS); //find a harder maze
 		}
-		return prev;
+		return prev; //return the hardest saved maze
 	}
 	
 	public static PathNode[][] findHardestPLevel(int dim, boolean usesDFS){ 
 		PathNode[][] hardest = null;
 		int fringeSize = 0;
 		int maxCells = 0;
-		for (int i = 0; i < 1000; i++){
+		for (int i = 0; i < 100; i++){ //generate 100 different boards from which to start generating harder children
 			cellsTraversed = 0;
 			maxFringeSize = 0;
 			double p = Math.random();
-			PathNode[][] map = generateMap(dim, p, false);
+			PathNode[][] map = generateMap(dim, p, false); //generate a map with some random occupation probability p
 			if (usesDFS){
-				map = getHardestMaze(map, true);
+				map = getHardestMaze(map, true); //get the hardest map derived from the original map using fringe size as a hardness metric
 				if (maxFringeSize > fringeSize) {
 					try {
 						fringeSize = maxFringeSize;
@@ -520,7 +508,7 @@ public class StaticGenAndSearch {
 					}
 				}
 			}else{
-				map = getHardestMaze(map, false);
+				map = getHardestMaze(map, false); //get the hardest map derived from the original map using nodes expanded as a hardness metric
 				if (cellsTraversed > maxCells) {
 					try {
 						maxCells = cellsTraversed;
@@ -596,76 +584,76 @@ public class StaticGenAndSearch {
 	// is computed by generating 1000 mazes at that p value, solving each one of them, and counting 
 	// the number of the total mazes that return solutions. That value is divided by 1000 to get the
 	// decimal value of solvability between 0 and 1.
-	public static DefaultXYDataset mazeSolvability() {
-		DefaultXYDataset data = new DefaultXYDataset();
+public static DefaultXYDataset mazeSolvability() {
+	DefaultXYDataset data = new DefaultXYDataset();
+	
+	double[][] dfsData = new double[2][50];
+	double[][] bfsData = new double[2][50];
+	double[][] bdbfsData = new double[2][50];
+	double[][] euclidData = new double[2][50];
+	double[][] manhattanData = new double[2][50];
+	
+	for (int p = 0; p < 50; p++) {
+		int numDFSSolved = 0;
+		int numBFSSolved = 0;
+		int numBDBFSSolved = 0;
+		int numManhattanSolved = 0;
+		int numEuclidSolved = 0;
 		
-		double[][] dfsData = new double[2][50];
-		double[][] bfsData = new double[2][50];
-		double[][] bdbfsData = new double[2][50];
-		double[][] euclidData = new double[2][50];
-		double[][] manhattanData = new double[2][50];
-		
-		for (int p = 0; p < 50; p++) {
-			int numDFSSolved = 0;
-			int numBFSSolved = 0;
-			int numBDBFSSolved = 0;
-			int numManhattanSolved = 0;
-			int numEuclidSolved = 0;
+		for (int trial = 0; trial < 1000; trial++) {
+			PathNode [][] testMap = generateMap(100, 0.02*p, false);
 			
-			for (int trial = 0; trial < 1000; trial++) {
-				PathNode [][] testMap = generateMap(100, 0.02*p, false);
-				
-				PathNode dfsSoln = DepthFirstSearch(testMap);
-				if (dfsSoln != null) {
-					numDFSSolved++;
-				}
-				resetMap(testMap);
-				
-				PathNode bfsSoln = BreadthFirstSearch(testMap);
-				if (bfsSoln != null) {
-					numBFSSolved++;
-				}
-				resetMap(testMap);
-				
-				PathNode bdbfsSoln = bidirectionalBFS(testMap);
-				if (bdbfsSoln != null) {
-					numBDBFSSolved++;
-				}
-				resetMap(testMap);
-				
-				PathNode manhattanAStarSoln = AStar(testMap, false);
-				if (manhattanAStarSoln != null) {
-					numManhattanSolved++;
-				}
-				resetMap(testMap);
-				
-				PathNode euclidAStarSoln = AStar(testMap, true);
-				if (euclidAStarSoln != null) {
-					numEuclidSolved++;
-				}
-				
+			PathNode dfsSoln = DepthFirstSearch(testMap);
+			if (dfsSoln != null) {
+				numDFSSolved++;
 			}
+			resetMap(testMap);
 			
-			dfsData[0][p] = 0.02*p;
-			dfsData[1][p] = (numDFSSolved/1000.0);
-			bfsData[0][p] = 0.02*p;
-			bfsData[1][p] = (numBFSSolved/1000.0);
-			bdbfsData[0][p] = 0.02*p;
-			bdbfsData[1][p] = (numBDBFSSolved/1000.0);
-			euclidData[0][p] = 0.02*p;
-			euclidData[1][p] = (numEuclidSolved/1000.0);
-			manhattanData[0][p] = 0.02*p;
-			manhattanData[1][p] = (numManhattanSolved/1000.0);
+			PathNode bfsSoln = BreadthFirstSearch(testMap);
+			if (bfsSoln != null) {
+				numBFSSolved++;
+			}
+			resetMap(testMap);
+			
+			PathNode bdbfsSoln = bidirectionalBFS(testMap);
+			if (bdbfsSoln != null) {
+				numBDBFSSolved++;
+			}
+			resetMap(testMap);
+			
+			PathNode manhattanAStarSoln = AStar(testMap, false);
+			if (manhattanAStarSoln != null) {
+				numManhattanSolved++;
+			}
+			resetMap(testMap);
+			
+			PathNode euclidAStarSoln = AStar(testMap, true);
+			if (euclidAStarSoln != null) {
+				numEuclidSolved++;
+			}
 			
 		}
 		
-		data.addSeries("A*-Manhattan", manhattanData);
-		data.addSeries("DFS", dfsData);
-		data.addSeries("BFS", bfsData);
-		data.addSeries("Bidirectional BFS", bdbfsData);
-		data.addSeries("A*-Euclidean", euclidData);
-		return data;
+		dfsData[0][p] = 0.02*p;
+		dfsData[1][p] = (numDFSSolved/1000.0);
+		bfsData[0][p] = 0.02*p;
+		bfsData[1][p] = (numBFSSolved/1000.0);
+		bdbfsData[0][p] = 0.02*p;
+		bdbfsData[1][p] = (numBDBFSSolved/1000.0);
+		euclidData[0][p] = 0.02*p;
+		euclidData[1][p] = (numEuclidSolved/1000.0);
+		manhattanData[0][p] = 0.02*p;
+		manhattanData[1][p] = (numManhattanSolved/1000.0);
+		
 	}
+	
+	data.addSeries("A*-Manhattan", manhattanData);
+	data.addSeries("DFS", dfsData);
+	data.addSeries("BFS", bfsData);
+	data.addSeries("Bidirectional BFS", bdbfsData);
+	data.addSeries("A*-Euclidean", euclidData);
+	return data;
+}
 	
 	// When called from main, generates a line plot between density (p) on the x-axis and 
 	// a decimal value between 0 and 1 representing the probability that a randomly generated maze
@@ -1293,6 +1281,8 @@ public class StaticGenAndSearch {
 		return null;
     }
     
+
+
     public static boolean predictFire (PathNode [][] newFireMap, PathNode goal, double flammabilityOfFire) throws Exception {
 		boolean success = true;
 		if (goal == null) {
@@ -1542,53 +1532,27 @@ public class StaticGenAndSearch {
 //			}
 		
 		
-//		
-//		boolean success = predictFire (fireMap, fireMap[fireMap.length-1][fireMap.length-1], 0.5);
-//		System.out.println("!!!!!" + success + "!!!!!");
-//		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
-//		fireSpreads(fireMap, 1.0);
-		
 		plotFireMazeSolvability();
-
-		/* dimTester();
-		
-		
-		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search"); 
-		
-		//plotMazeSolvability();
-		pathsForAllAlgorithms(0.2);
-		//plotAvgAStarNodes();
-		//plotShortestPaths();
-		//plotExpandedNodes();
-		/*PathNode[][] testMap = generateMap(11, 0.22, false);
-		printMap(testMap);
-		System.out.println();
-		PathNode goal = AStar(testMap, true);
-		resetMap(testMap);
-		goal = AStar(testMap, false);
-		printMazeSolutionGUI(testMap, goal);
-
-		while (goal!= null) {
-			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
-			goal = goal.prev;
-		} */ 
-		/*PathNode[][] regMap = generateMap(10, 0.2, false);
-		printMazeSolutionGUI(regMap, null, "A* Manhattan - original maze");
-		AStar(regMap, false);
-		System.out.println("Nodes expanded on the original maze: " + cellsTraversed);
-		regMap = getHardestMaze(regMap, false);
-		printMazeSolutionGUI(regMap, null, "A* Manhattan - hardest maze");
+		// Generate Hard Maze
+		maxFringeSize = 0;
+		// First, generate original maze
+		PathNode[][] regMap2 = generateMap(30, 0.2, false);
+		// Get baseline metric (fringe size for depth first search)
+		DepthFirstSearch(regMap2);
+		System.out.println("Maximum fringe size in solving the original maze: " + maxFringeSize);
+		maxFringeSize = 0;
+		resetMap(regMap2);
+		// Generate hardest maze possible from the original maze, using hill-climbing
+		regMap2 = getHardestMaze(regMap2, true);
+		System.out.println("Maximum fringe size in solving the hardest variant of original maze: " + maxFringeSize); 
+		maxFringeSize = 0;
+		// Generates hard mazes for varying p levels.
+		PathNode[][] theHardest = findHardestPLevel(30, true);
+		System.out.println("Maximum fringe size in solving the absolute hardest maze: " + maxFringeSize);
+		cellsTraversed = 0;
+		maxFringeSize = 0;
 		System.out.println("Nodes expanded on the hardest maze: " + cellsTraversed);
-		/*PathNode[][] regMap2 = generateMap(10, 0.2, false);
-		printMazeSolutionGUI(regMap2, null, "DFS - original maze");
-		AStar(regMap2, false);
-		System.out.println("Max fringe size on the original maze: " + maxFringeSize);
-		regMap = getHardestMaze(regMap2, false);
-		printMazeSolutionGUI(regMap2, null, "DFS - hardest maze");
-		System.out.println("Max fringe size on the hardest maze: " + maxFringeSize);*/
-//		PathNode[][] theHardest = findHardestPLevel(100, true);
-//		printMazeSolutionGUI(theHardest, null, "DFS - hardest maze");
-//		System.out.println("Size of fringe on the hardest maze: " + maxFringeSize);
+
 	}
 
 }
