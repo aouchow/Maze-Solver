@@ -97,6 +97,53 @@ public class StaticGenAndSearch {
 		return fringe;
 	}
 	
+	public static PriorityQueue<PathNode> updateFringeWithHeuristicFire(PriorityQueue<PathNode> fringe, PathNode[][] map, PathNode curr, boolean[][] visited, boolean usesEuclidean, int[][]distance, PathNode goal){
+		int rowIndex = curr.row;
+		int colIndex = curr.col;
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !map[rowIndex+1][colIndex].isOnFire && map[rowIndex+1][colIndex].prev == null && !visited[rowIndex+1][colIndex]) { //moving down is a non-repeated, viable choice (node not already in fringe or visited)
+			map[rowIndex+1][colIndex].prev = curr;
+			distance[rowIndex+1][colIndex] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
+			if (usesEuclidean) {
+				map[rowIndex+1][colIndex].distanceEst = distance[rowIndex+1][colIndex] + Math.sqrt((Math.pow((rowIndex+1)-(goal.row), 2)) + (Math.pow((colIndex)-(goal.col), 2))); //add Euclidean distance heuristic to goal to the current distance from start to node
+			}else{
+				map[rowIndex+1][colIndex].distanceEst = distance[rowIndex+1][colIndex] + Math.abs(((rowIndex+1)-(goal.row)) + (colIndex-(goal.col))); //add Manhattan distance heuristic to the current distance from start to node
+			}
+			fringe.add(map[rowIndex+1][colIndex]);
+		}
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !map[rowIndex][colIndex+1].isOnFire && map[rowIndex][colIndex+1].prev == null && !visited[rowIndex][colIndex+1]) { //moving right is a non-repeated, viable choice
+			map[rowIndex][colIndex+1].prev = curr;
+			distance[rowIndex][colIndex+1] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
+			if (usesEuclidean) {
+				map[rowIndex][colIndex+1].distanceEst = distance[rowIndex][colIndex+1] + Math.sqrt((Math.pow((rowIndex)-(goal.row), 2)) + (Math.pow((colIndex+1)-(goal.col), 2))); //add Euclidean distance heuristic to goal to the current distance from start to node
+			}else{
+				map[rowIndex][colIndex+1].distanceEst = distance[rowIndex][colIndex+1] + Math.abs(((rowIndex)-(goal.row)) + ((colIndex+1)-(goal.col))); //add Manhattan distance heuristic to the current distance from start to node
+			}
+			fringe.add(map[rowIndex][colIndex+1]);
+		}
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !map[rowIndex-1][colIndex].isOnFire && map[rowIndex-1][colIndex].prev == null && !visited[rowIndex-1][colIndex]) { //moving up is a non-repeated, viable choice
+			map[rowIndex-1][colIndex].prev = curr;
+			distance[rowIndex-1][colIndex] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
+			if (usesEuclidean) {//Euclidean distance is the heuristic
+				map[rowIndex-1][colIndex].distanceEst = distance[rowIndex-1][colIndex] + Math.sqrt((Math.pow((rowIndex-1)-(goal.row), 2)) + (Math.pow((colIndex)-(goal.col), 2))); //add Euclidean distance heuristic to goal to the current distance from start to node
+			}else{ //use Manhattan distance
+				map[rowIndex-1][colIndex].distanceEst = distance[rowIndex-1][colIndex] + Math.abs(((rowIndex-1)-(goal.row)) + (colIndex-(goal.col))); //add Manhattan distance heuristic to the current distance from start to node
+			}
+			fringe.add(map[rowIndex-1][colIndex]);
+		}
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !map[rowIndex][colIndex-1].isOnFire && map[rowIndex][colIndex-1].prev == null && !visited[rowIndex][colIndex-1]) { //moving left is a non-repeated, viable choice
+			map[rowIndex][colIndex-1].prev = curr;
+			distance[rowIndex][colIndex-1] = distance[rowIndex][colIndex]+1; //distance to child = distance to parent + one additional operation
+			if (usesEuclidean) {
+				map[rowIndex][colIndex-1].distanceEst = distance[rowIndex][colIndex-1] + Math.sqrt((Math.pow((rowIndex)-(goal.row), 2)) + (Math.pow((colIndex-1)-(goal.col), 2))); //add Euclidean distance heuristic to goal to the current distance from start to node
+			}else{
+				map[rowIndex][colIndex-1].distanceEst = distance[rowIndex][colIndex-1] + Math.abs(((rowIndex)-(goal.row)) + ((colIndex-1)-(goal.col))); //add Manhattan distance heuristic to the current distance from start to node
+			}
+			fringe.add(map[rowIndex][colIndex-1]);
+		}
+		return fringe;
+	}
+	
+	
 	public static PathNode updateFringeBDBFS(LinkedHashSet<PathNode> expandFringe, LinkedHashSet<PathNode> intersectFringe, PathNode [][] map, PathNode curr, boolean [][] visited) {
 		int rowIndex = curr.row;
 		int colIndex = curr.col;
@@ -262,9 +309,10 @@ public class StaticGenAndSearch {
 		return null;
 	}
 	
-	//this method is called when AStar is repeatedly called to recalculate route to goal wh
-	public static PathNode AStarWithNewStart (PathNode start, PathNode[][]map, boolean usesEuclidean) {
+	//this method is called when AStar is repeatedly called to recalculate route to goal
+	public static PathNode AStarForFire (PathNode start, PathNode goal, PathNode[][]map, boolean usesEuclidean) {
 		//System.out.println("AStarWithNewStart start: (" + start.row + ", " + start.col + ")");
+
 		if (map == null || map[0] == null || map[0].length == 0) return null;  //map isn't constructed in a valid way
 		boolean[][] visited = new boolean[map.length][map.length];
 		int[][]distance = new int[map.length][map.length]; //distance (# of operations) from start to PathNode at distance[i][j]
@@ -284,11 +332,11 @@ public class StaticGenAndSearch {
 			PathNode curr = fringe.poll();
 			visited[curr.row][curr.col] = true;
 			cellsTraversed++;
-			if (curr.equals(map[map.length-1][map.length-1])) {
+			if (curr.equals(goal)) {
 				maxFringeSize = Math.max(maxFringeSize, fringe.size());
 				return curr;
 			}else{
-				fringe = updateFringeWithHeuristic(fringe, map, curr, visited, usesEuclidean, distance); 
+				fringe = updateFringeWithHeuristicFire(fringe, map, curr, visited, usesEuclidean, distance, goal); 
 				maxFringeSize = Math.max(maxFringeSize, fringe.size());
 			}
 		}
@@ -919,13 +967,18 @@ public class StaticGenAndSearch {
 		PathNode currentPosition = path.pop(); //start at starting position
 		while (currentPosition != initialFireMap[initialFireMap.length - 1][initialFireMap.length - 1]) { //termination conditions
 			if (currentPosition.isOnFire) {
-				return success = false;
+				success = false;
+				System.out.println(success);
+				return success;
 			}
 			currentPosition = path.pop();
 			fireSpreads(initialFireMap, flammabilityOfFire);
+
 			//printMazeSolutionGUI(initialFireMap, goal, currentPosition, "Adversarial Search");
+
 			
 		}
+		System.out.println(success);
 		return success;
 	}
 	
@@ -957,7 +1010,7 @@ public class StaticGenAndSearch {
 			}
 			resetMap(newFireMap);
 			//System.out.println("We are about to track a new path to goal based on new fire position from position: (" + currentPosition.row + ", " + currentPosition.col + ")");
-			goal = AStarWithNewStart (currentPosition, newFireMap, false);
+			goal = AStarForFire(currentPosition, newFireMap[newFireMap.length-1][newFireMap.length-1], newFireMap, false);
 			if (goal == null) {
 				System.out.println("no more paths to goal");
 				return success = false;
@@ -1011,24 +1064,29 @@ public class StaticGenAndSearch {
 		double[][] avoidFireData = new double[2][50];
 		
 		for (int q = 1; q < 51; q++) {
+			System.out.println("q: " + 0.02*q);
 			int numIgnoreFireSolved = 0;
 			int numAvoidFireSolved = 0;
-			System.out.println("q: " + 0.02*q);
-			for (int trial = 0; trial < 25; trial++) {
-				System.out.println("Trial: " + trial);
-				PathNode [][] testMap = generateMap(50, 0.28, true);
+			for (int trial = 0; trial < 40; trial++) {
+				PathNode [][] testMap = generateMap(100, 0.28, true);
 				PathNode initialFire = findInitialFire(testMap);
 				initialFire.isOnFire = false; //temporarily set it to false so A* can find path between start and initial fire
-				PathNode manhattanAStarFireSoln = AStar(testMap, false);
-				while (manhattanAStarFireSoln == null) { //if there is no initial path between fire and start, ignore maze and create a new maze
-					testMap = generateMap(100, 0.28, true);
+				PathNode fireToStart = AStarForFire(testMap[0][0], initialFire, testMap, false);
+				resetMap(testMap);
+				initialFire.isOnFire = true;
+				PathNode initialAStar = AStarForFire(testMap[0][0], testMap[testMap.length-1][testMap.length-1], testMap, false);
+				while (fireToStart == null || initialAStar == null) { //if there is no initial path between fire and start or no path from start to goal, ignore maze and create a new maze
+					System.out.println("Either the fire cannot reach start or there's no path from start to goal. Making new maze...");
+					testMap = generateMap(100, 0.1, true);
 					initialFire = findInitialFire(testMap);
 					initialFire.isOnFire = false;
-					manhattanAStarFireSoln = AStar(testMap, false);
+					fireToStart = AStarForFire(testMap[0][0], initialFire, testMap, false);
+					initialFire.isOnFire = true;
+					resetMap(testMap);
+					initialAStar = AStarForFire(testMap[0][0], testMap[testMap.length-1][testMap.length-1], testMap, false);
 				}
-				initialFire.isOnFire = true;
 				
-				boolean ignoreFireSoln = ignoreFireSpreading (testMap, manhattanAStarFireSoln, 0.02*q); //use AStar Manhattan distance
+				boolean ignoreFireSoln = ignoreFireSpreading(testMap, initialAStar, 0.02*q); //use AStar Manhattan distance
 				System.out.println("Ignore Fire Soln: " + ignoreFireSoln);
 				if (ignoreFireSoln == true) {
 					numIgnoreFireSolved++;
@@ -1037,15 +1095,16 @@ public class StaticGenAndSearch {
 				resetMap(testMap);
 				for (int i = 0; i < testMap.length; i++) {
 					for (int j = 0; j < testMap.length; j++) {
-						if ((testMap[i][j] != initialFire) && (testMap[i][j].isOnFire)) {
+						if (testMap[i][j].isOnFire) {
 							testMap[i][j].isOnFire = false;
 						}
 					}
 				}
+				initialFire.isOnFire = true;
 				
-				manhattanAStarFireSoln = AStar(testMap, false);
+				initialAStar = AStarForFire(testMap[0][0], testMap[testMap.length-1][testMap.length-1], testMap, false);
 				
-				boolean avoidFireSoln = avoidFireSpreading(testMap, manhattanAStarFireSoln, 0.02*q); //use AStar Manhattan distance
+				boolean avoidFireSoln = avoidFireSpreading(testMap, initialAStar, 0.02*q); //use AStar Manhattan distance
 				System.out.println("Trial: " + trial);
 				System.out.println("Avoid Fire Soln: " + avoidFireSoln);
 				if (avoidFireSoln == true) {
@@ -1055,12 +1114,13 @@ public class StaticGenAndSearch {
 			}
 			
 			ignoreFireData[0][q-1] = 0.02*q;
-			ignoreFireData[1][q-1] = (numIgnoreFireSolved/25.0);
+			ignoreFireData[1][q-1] = (numIgnoreFireSolved/40.0);
 			avoidFireData[0][q-1] = 0.02*q;
-			avoidFireData[1][q-1] = (numAvoidFireSolved/25.0);
+			avoidFireData[1][q-1] = (numAvoidFireSolved/40.0);
 		}
 		data.addSeries("Ignore Fire Strategy", ignoreFireData);
 		data.addSeries("Avoid Fire Stratgy", avoidFireData);
+		
 		return data;
 	}
 	
@@ -1080,6 +1140,46 @@ public class StaticGenAndSearch {
 		solvabilityPlotApp.setVisible(true);
 	}
 	
+    //computes the probability of each square in the maze of catching on fire
+    //blocked or fire squares have a probability of 0.0 by default
+    public static double[][] computeFireProbability (PathNode [][] map, double flammability) {
+        double [][] fireProbability = new double [map.length][map.length];
+        for (int i = 0; i < map.length; i++) {
+            for (int j = 0; j < map.length; j++) {
+                int numNbrFire = 0;
+                if (!map[i][j].isEmpty || map[i][j].isOnFire) {
+                    continue;
+                }
+                if (i+1 < map.length && map[i+1][j].isOnFire) {
+                    numNbrFire++;
+                }
+                if (j+1 < map.length && map[i][j+1].isOnFire) {
+                    numNbrFire++;
+                }
+                if (i-1 >= 0 && map[i-1][j].isOnFire) {
+                    numNbrFire++;
+                }
+                if (j-1 >= 0 && map[i][j-1].isOnFire) {
+                    numNbrFire++;
+                }
+                double onFire = 1-(Math.pow(1-flammability, numNbrFire));
+                fireProbability[i][j] = onFire;
+            }
+        }
+        return fireProbability;
+    }
+ 
+ 
+ 
+    public static boolean predictFire (PathNode [][] fireMap, double [][] probabilities, PathNode goal, double flammabilityOfFire) throws Exception {
+        boolean success = true;
+        if (goal == null) {
+            throw new Exception ("maze is not initially solvable");
+        }
+        return success;
+       
+    }
+	
 	
 	// Returns a linked list representation of the solved path from start to goal
 	// Passed in start to handle an edge case where we don't want to go all the way to the start
@@ -1097,6 +1197,7 @@ public class StaticGenAndSearch {
 			System.out.print("(" + path.get(i).row + "," + path.get(i).col + ") ");
 		}
 		System.out.println();*/
+
 		return path;
 	}
 	
@@ -1189,17 +1290,29 @@ public class StaticGenAndSearch {
 	
 	public static void main(String[] args) throws Exception {
 		
-		PathNode[][] fireMap = generateMap(100, 0.2, true);
-		//printMap(fireMap);
-		/*System.out.println();
-		PathNode fireGoal = AStarWithNewStart(fireMap[0][0], fireMap, true);
-		printMazeSolutionGUI(fireMap, fireGoal, fireMap[0][0], "Adversarial Search");
-		boolean success = avoidFireSpreading (fireMap, fireGoal, 0.04);
-		System.out.println("!!!!!" + success + "!!!!!");*/
-		//LinkedList <PathNode> path = generateSolvedPath (fireGoal);
-		//fireSpreads(fireMap, 1.0);
-
+		/*PathNode[][] fireMap = generateMap(10, 0.1, true);
+		PathNode initialFire = findInitialFire(fireMap);
+//		printMap(fireMap);
+//		System.out.println();
+		initialFire.isOnFire = false;
+		PathNode fireGoal = AStarForFire(fireMap[0][0], initialFire, fireMap, false);
+		if (fireGoal != null) {
+			initialFire.isOnFire = true;
+			resetMap(fireMap);
+			PathNode initialAStar = AStarForFire(fireMap[0][0], fireMap[fireMap.length-1][fireMap.length-1], fireMap, false);
+			LinkedList<PathNode> path = generateSolvedPath(initialAStar, null);
+			printMazeSolutionGUI(fireMap, initialAStar, fireMap[0][0], "Adversarial Search");
+		} else {
+			System.out.println("Fire cannot reach start.");
+		}*/
+		
+//		boolean success = ignoreFireSpreading (fireMap, fireGoal, 0.5);
+//		System.out.println("!!!!!" + success + "!!!!!");
+//		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
+//		fireSpreads(fireMap, 1.0);
+		
 		plotFireMazeSolvability();
+
 		/* dimTester();
 		
 		
