@@ -1428,72 +1428,21 @@ public static DefaultXYDataset mazeSolvability() {
 		
 		boolean success = predictFire (fireMap, fireMap[fireMap.length-1][fireMap.length-1], 0.5);
 		System.out.println("!!!!!" + success + "!!!!!");
-//		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
-//		fireSpreads(fireMap, 1.0);
-		
-//		plotFireMazeSolvability();
-
-		/* dimTester();
-		
-		
-		printMazeSolutionGUI(fireMap, fireGoal, "Adversarial Search"); 
-		
-		//plotMazeSolvability();
-		pathsForAllAlgorithms(0.2);
-		//plotAvgAStarNodes();
-		//plotShortestPaths();
-		//plotExpandedNodes();
-		/*PathNode[][] testMap = generateMap(11, 0.22, false);
-		printMap(testMap);
-		System.out.println();
-		PathNode goal = AStar(testMap, true);
-		resetMap(testMap);
-		goal = AStar(testMap, false);
-		printMazeSolutionGUI(testMap, goal);
-
-		while (goal!= null) {
-			System.out.println("Node: row - " + goal.row + " col - " + goal.col); 
-			goal = goal.prev;
-		} */ 
-		/*PathNode[][] regMap = generateMap(10, 0.2, false);
-		printMazeSolutionGUI(regMap, null, "A* Manhattan - original maze");
-		AStar(regMap, false);
-		System.out.println("Nodes expanded on the original maze: " + cellsTraversed);
-		regMap = getHardestMaze(regMap, false);
-		printMazeSolutionGUI(regMap, null, "A* Manhattan - hardest maze");
-		System.out.println("Nodes expanded on the hardest maze: " + cellsTraversed);*/
-		
 		maxFringeSize = 0;
 		PathNode[][] regMap2 = generateMap(30, 0.2, false);
-		//AStar(regMap2, false);
-		//printMazeSolutionGUI(regMap2, null, "DFS with p = 0.2 - original maze");
-			
-	
 		DepthFirstSearch(regMap2);
 		System.out.println("Maximum fringe size in solving the original maze: " + maxFringeSize);
 		maxFringeSize = 0;
 		resetMap(regMap2);
 		regMap2 = getHardestMaze(regMap2, true);
-		//printMazeSolutionGUI(regMap2, null, "DFS with p = 0.2 - hardest variant of original maze");
 		System.out.println("Maximum fringe size in solving the hardest variant of original maze: " + maxFringeSize); 
 		maxFringeSize = 0;
 		PathNode[][] theHardest = findHardestPLevel(30, true);
-	//	printMazeSolutionGUI(theHardest, null, "DFS - absolute hardest maze");
 		System.out.println("Maximum fringe size in solving the absolute hardest maze: " + maxFringeSize);
 		cellsTraversed = 0;
 		maxFringeSize = 0;
 
 		System.out.println("Nodes expanded on the hardest maze: " + cellsTraversed);
-		/*PathNode[][] regMap2 = generateMap(10, 0.2, false);
-		printMazeSolutionGUI(regMap2, null, "DFS - original maze");
-		AStar(regMap2, false);
-		System.out.println("Max fringe size on the original maze: " + maxFringeSize);
-		regMap = getHardestMaze(regMap2, false);
-		printMazeSolutionGUI(regMap2, null, "DFS - hardest maze");
-		System.out.println("Max fringe size on the hardest maze: " + maxFringeSize);*/
-//		PathNode[][] theHardest = findHardestPLevel(100, true);
-//		printMazeSolutionGUI(theHardest, null, "DFS - hardest maze");
-//		System.out.println("Size of fringe on the hardest maze: " + maxFringeSize);
 
 	}
 
