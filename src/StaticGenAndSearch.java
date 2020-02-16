@@ -264,7 +264,7 @@ public class StaticGenAndSearch {
 	
 	//this method is called when AStar is repeatedly called to recalculate route to goal wh
 	public static PathNode AStarWithNewStart (PathNode start, PathNode[][]map, boolean usesEuclidean) {
-		System.out.println("AStarWithNewStart start: (" + start.row + ", " + start.col + ")");
+		//System.out.println("AStarWithNewStart start: (" + start.row + ", " + start.col + ")");
 		if (map == null || map[0] == null || map[0].length == 0) return null;  //map isn't constructed in a valid way
 		boolean[][] visited = new boolean[map.length][map.length];
 		int[][]distance = new int[map.length][map.length]; //distance (# of operations) from start to PathNode at distance[i][j]
@@ -357,7 +357,7 @@ public class StaticGenAndSearch {
 		if (!visited [curr.row][curr.col]) { // This should always be true, because nodes added to the fringe are checked to not have already been visited.
 			cellsTraversed++;
 			visited [curr.row][curr.col] = true;
-			System.out.println("Visited by BD-DFS: (" + curr.row + "," + curr.col + ")");
+			//System.out.println("Visited by BD-DFS: (" + curr.row + "," + curr.col + ")");
 			cellsTraversed++;
 			PathNode intersect = updateFringeBDBFS(expandFringe, intersectFringe, map, curr, visited);
 			return intersect;
@@ -522,7 +522,7 @@ public class StaticGenAndSearch {
 		cells[map.length-1][map.length-1].setLayout(new GridBagLayout());
 		cells[map.length-1][map.length-1].add(goalLabel);
 		
-		LinkedList <PathNode> path = generateSolvedPath (goal);
+		LinkedList <PathNode> path = generateSolvedPath (goal, currentPosition);
 		for (int i = 0; i < path.size(); i++) {
 			PathNode current = path.get(i);
 			if (current == currentPosition && current.isOnFire) {
@@ -915,7 +915,7 @@ public class StaticGenAndSearch {
 		if (goal == null) {
 			throw new Exception ("maze is not initially solvable");
 		}
-		LinkedList<PathNode> path = generateSolvedPath(goal);
+		LinkedList<PathNode> path = generateSolvedPath(goal, null);
 		PathNode currentPosition = path.pop(); //start at starting position
 		while (currentPosition != initialFireMap[initialFireMap.length - 1][initialFireMap.length - 1]) { //termination conditions
 			if (currentPosition.isOnFire) {
@@ -923,7 +923,7 @@ public class StaticGenAndSearch {
 			}
 			currentPosition = path.pop();
 			fireSpreads(initialFireMap, flammabilityOfFire);
-			printMazeSolutionGUI(initialFireMap, goal, currentPosition, "Adversarial Search");
+			//printMazeSolutionGUI(initialFireMap, goal, currentPosition, "Adversarial Search");
 			
 		}
 		return success;
@@ -938,33 +938,37 @@ public class StaticGenAndSearch {
 		if (goal == null) {
 			throw new Exception ("maze is not initially solvable");
 		}
-		LinkedList<PathNode> path = generateSolvedPath(goal);
+		LinkedList<PathNode> path = generateSolvedPath(goal, null);
 		PathNode currentPosition = path.pop(); //start at starting position
+		//System.out.println("Starting position at avoidFireSpreading: (" + currentPosition.row + ", " + currentPosition.col + ")");
 		while (currentPosition != newFireMap[newFireMap.length - 1][newFireMap.length - 1]) { //termination conditions
 			if (currentPosition.isOnFire) {
 				System.out.println("burned");
 				return success = false;
 			}
 			currentPosition = path.pop(); //person makes the first move
-			printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the person
+			//System.out.println("Player made a move to (" + currentPosition.row + ", " + currentPosition.col + ")");
+			//printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the person
 			fireSpreads(newFireMap, flammabilityOfFire);
-			printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the fire
+			//printMazeSolutionGUI(newFireMap, goal, currentPosition, "Adversarial Search"); //print the move of the fire
 			if (currentPosition.isOnFire) { //after fire moves, re-check to see if you've burned
 				System.out.println("burned");
 				return success = false;
 			}
 			resetMap(newFireMap);
+			//System.out.println("We are about to track a new path to goal based on new fire position from position: (" + currentPosition.row + ", " + currentPosition.col + ")");
 			goal = AStarWithNewStart (currentPosition, newFireMap, false);
 			if (goal == null) {
 				System.out.println("no more paths to goal");
 				return success = false;
 			}
-			path = generateSolvedPath(goal);
+			path = generateSolvedPath(goal, null);
 //			PathNode newCurrentPosition = path.pop();
 //			while (newCurrentPosition != currentPosition) {
 //				newCurrentPosition = path.pop();
 //			}
 			currentPosition = path.pop();
+			//System.out.println("We are at the end of an iteration. The player's current position is now: (" + currentPosition.row + ", " + currentPosition.col + ")");
 		}
 		return success;
 	}
@@ -1009,9 +1013,10 @@ public class StaticGenAndSearch {
 		for (int q = 1; q < 51; q++) {
 			int numIgnoreFireSolved = 0;
 			int numAvoidFireSolved = 0;
-			
-			for (int trial = 0; trial < 1000; trial++) {
-				PathNode [][] testMap = generateMap(100, 0.28, true);
+			System.out.println("q: " + 0.02*q);
+			for (int trial = 0; trial < 25; trial++) {
+				System.out.println("Trial: " + trial);
+				PathNode [][] testMap = generateMap(50, 0.28, true);
 				PathNode initialFire = findInitialFire(testMap);
 				initialFire.isOnFire = false; //temporarily set it to false so A* can find path between start and initial fire
 				PathNode manhattanAStarFireSoln = AStar(testMap, false);
@@ -1022,27 +1027,40 @@ public class StaticGenAndSearch {
 					manhattanAStarFireSoln = AStar(testMap, false);
 				}
 				initialFire.isOnFire = true;
-//				
-//				PathNode ignoreFireSoln = ignoreFireSpreading (testMap, 0.02*q); //use AStar Manhattan distance
-//				if (ignoreFireSoln != null) {
-//					numIgnoreFireSolved++;
-//				}
-//				resetMap(testMap);
-//				
-//				PathNode avoidFireSoln = avoidFireSpreading (testMap, 0.02*q); //use AStar Manhattan distance
-//				if (avoidFireSoln != null) {
-//					numAvoidFireSolved++;
-//				}
+				
+				boolean ignoreFireSoln = ignoreFireSpreading (testMap, manhattanAStarFireSoln, 0.02*q); //use AStar Manhattan distance
+				System.out.println("Ignore Fire Soln: " + ignoreFireSoln);
+				if (ignoreFireSoln == true) {
+					numIgnoreFireSolved++;
+				}
+				
+				resetMap(testMap);
+				for (int i = 0; i < testMap.length; i++) {
+					for (int j = 0; j < testMap.length; j++) {
+						if ((testMap[i][j] != initialFire) && (testMap[i][j].isOnFire)) {
+							testMap[i][j].isOnFire = false;
+						}
+					}
+				}
+				
+				manhattanAStarFireSoln = AStar(testMap, false);
+				
+				boolean avoidFireSoln = avoidFireSpreading(testMap, manhattanAStarFireSoln, 0.02*q); //use AStar Manhattan distance
+				System.out.println("Trial: " + trial);
+				System.out.println("Avoid Fire Soln: " + avoidFireSoln);
+				if (avoidFireSoln == true) {
+					numAvoidFireSolved++;
+				}
 				resetMap(testMap);
 			}
 			
-			ignoreFireData[0][q] = 0.02*q;
-			ignoreFireData[1][q] = (numIgnoreFireSolved/1000.0);
-			avoidFireData[0][q] = 0.02*q;
-			avoidFireData[1][q] = (numAvoidFireSolved/1000.0);
+			ignoreFireData[0][q-1] = 0.02*q;
+			ignoreFireData[1][q-1] = (numIgnoreFireSolved/25.0);
+			avoidFireData[0][q-1] = 0.02*q;
+			avoidFireData[1][q-1] = (numAvoidFireSolved/25.0);
 		}
-		data.addSeries("Ignore Fire Stratgey", ignoreFireData);
-		data.addSeries("Avoid Fire Stratgey", avoidFireData);
+		data.addSeries("Ignore Fire Strategy", ignoreFireData);
+		data.addSeries("Avoid Fire Stratgy", avoidFireData);
 		return data;
 	}
 	
@@ -1051,9 +1069,9 @@ public class StaticGenAndSearch {
 	// with density p will be solved. Plots are generated for all the different algorithms
 	// explored in this project, and the probability of being solved is generated based on sample
 	// sizes of 100 mazes for each data point.
-	public static void plotFireMazeSolvability() {
+	public static void plotFireMazeSolvability() throws Exception {
 		ApplicationFrame solvabilityPlotApp = new ApplicationFrame("Maze Solvability Window");
-		JFreeChart solvabilityPlot = ChartFactory.createXYLineChart("Maze Solvability at Different Flammabilities", "Density (q)", "Fraction Solved", mazeSolvability(), PlotOrientation.VERTICAL, true, true, false);
+		JFreeChart solvabilityPlot = ChartFactory.createXYLineChart("Maze Solvability at Different Flammabilities", "Flammability (q)", "Fraction Solved", fireMazeSolvability(), PlotOrientation.VERTICAL, true, true, false);
 		ChartPanel chartPanel = new ChartPanel(solvabilityPlot);
 		chartPanel.setPreferredSize(new java.awt.Dimension(560, 367));
 		solvabilityPlotApp.setContentPane(chartPanel);
@@ -1063,18 +1081,22 @@ public class StaticGenAndSearch {
 	}
 	
 	
-	//Returns a linked list representation of the solved path from start to goal
-	public static LinkedList <PathNode> generateSolvedPath (PathNode goal) {
+	// Returns a linked list representation of the solved path from start to goal
+	// Passed in start to handle an edge case where we don't want to go all the way to the start
+	// If we do want to go, then it will be null
+	public static LinkedList <PathNode> generateSolvedPath (PathNode goal, PathNode start) {
 		LinkedList<PathNode> path = new LinkedList<PathNode> ();
 		while (goal != null) {
 			path.addFirst(goal);
+			if ((start != null) && (goal == start))
+				break;
 			goal = goal.prev;
 		}
-		System.out.println();
+		/*System.out.println();
 		for (int i = 0; i < path.size(); i++) {
 			System.out.print("(" + path.get(i).row + "," + path.get(i).col + ") ");
 		}
-		System.out.println();
+		System.out.println();*/
 		return path;
 	}
 	
@@ -1167,16 +1189,17 @@ public class StaticGenAndSearch {
 	
 	public static void main(String[] args) throws Exception {
 		
-		PathNode[][] fireMap = generateMap(10, 0.1, true);
-//		printMap(fireMap);
-//		System.out.println();
+		PathNode[][] fireMap = generateMap(100, 0.2, true);
+		//printMap(fireMap);
+		/*System.out.println();
 		PathNode fireGoal = AStarWithNewStart(fireMap[0][0], fireMap, true);
 		printMazeSolutionGUI(fireMap, fireGoal, fireMap[0][0], "Adversarial Search");
-		boolean success = ignoreFireSpreading (fireMap, fireGoal, 0.5);
-		System.out.println("!!!!!" + success + "!!!!!");
-//		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
-//		fireSpreads(fireMap, 1.0);
+		boolean success = avoidFireSpreading (fireMap, fireGoal, 0.04);
+		System.out.println("!!!!!" + success + "!!!!!");*/
+		//LinkedList <PathNode> path = generateSolvedPath (fireGoal);
+		//fireSpreads(fireMap, 1.0);
 
+		plotFireMazeSolvability();
 		/* dimTester();
 		
 		
