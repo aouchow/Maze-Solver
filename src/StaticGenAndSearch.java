@@ -1169,17 +1169,69 @@ public class StaticGenAndSearch {
         return fireProbability;
     }
  
+	public static int BFSFire (PathNode[][] map, PathNode nbr) {
+		nbr.prev = null;
+		LinkedList<PathNode> fringe = new LinkedList<PathNode>();
+		boolean [][] visited = new boolean[map.length][map.length];
+		fringe.add(nbr);
+		while (!fringe.isEmpty()) {
+			PathNode curr = fringe.getFirst();
+			fringe.remove(); //removes first element from list
+			visited[curr.row][curr.col] = true; //mark node as visited
+			if (curr.isOnFire) { //found closest fire
+				LinkedList <PathNode> pathToFire = generateSolvedPath(curr, null);
+				return pathToFire.size() - 1;
+			}else{
+				fringe = updateFringe(fringe, map, curr, visited); //updates fringe
+			}
+		}
+		return -1;
+	}
  
+	//this for strategy 3 for fire maze
+	public static PriorityQueue <PathNode> updatePredictiveHeuristic (PathNode [][] map, PathNode curr, PathNode goal, PriorityQueue<PathNode> fringe) {
+		int rowIndex = curr.row;
+		int colIndex = curr.col;
+		if (rowIndex+1 < map.length && map[rowIndex+1][colIndex].isEmpty && !map[rowIndex+1][colIndex].isOnFire && map[rowIndex+1][colIndex].prev == null) {
+			map[rowIndex+1][colIndex].prev = curr;
+			map[rowIndex+1][colIndex].distanceEst = Math.abs(((rowIndex+1)-(goal.row)) + (colIndex-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			fringe.add(map[rowIndex+1][colIndex]);
+		}
+		if (colIndex+1 < map.length && map[rowIndex][colIndex+1].isEmpty && !map[rowIndex][colIndex+1].isOnFire && map[rowIndex][colIndex+1].prev == null) {
+			map[rowIndex][colIndex+1].prev = curr;
+			map[rowIndex][colIndex+1].distanceEst = Math.abs(((rowIndex)-(goal.row)) + ((colIndex+1)-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			fringe.add(map[rowIndex][colIndex+1]);
+		}
+		if (rowIndex-1 >= 0 && map[rowIndex-1][colIndex].isEmpty && !map[rowIndex-1][colIndex].isOnFire && map[rowIndex-1][colIndex].prev == null) {
+			map[rowIndex-1][colIndex].prev = curr;
+			map[rowIndex-1][colIndex].distanceEst = Math.abs(((rowIndex-1)-(goal.row)) + (colIndex-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			fringe.add(map[rowIndex-1][colIndex]);
+		}
+		if (colIndex-1 >= 0 && map[rowIndex][colIndex-1].isEmpty && !map[rowIndex][colIndex-1].isOnFire && map[rowIndex][colIndex-1].prev == null) {
+			map[rowIndex][colIndex-1].prev = curr;
+			map[rowIndex][colIndex-1].distanceEst = Math.abs(((rowIndex)-(goal.row)) + ((colIndex-1)-(goal.col))) - BFSFire(map, curr); //add Manhattan distance heuristic to the current distance from start to node
+			fringe.add(map[rowIndex][colIndex-1]);
+		}
+		return fringe;
+	}
  
-    public static boolean predictFire (PathNode [][] fireMap, double [][] probabilities, PathNode goal, double flammabilityOfFire) throws Exception {
+    public static PathNode AStarPredict(PathNode [][] map, double [][] probabilities, double flammabilityOfFire) throws Exception {
         boolean success = true;
-        if (goal == null) {
-            throw new Exception ("maze is not initially solvable");
-        }
-        return success;
-       
+        PriorityQueue <PathNode> fringe = new PriorityQueue<PathNode>();
+		fringe.add(map[0][0]);
+		while (!fringe.isEmpty()) {
+			PathNode curr = fringe.poll();
+			if (curr == map[map.length-1][map.length-1]) {
+				return curr;
+			}
+			fringe = updatePredictiveHeuristic(map, curr, map[map.length-1][map.length-1], fringe);
+		}
+		return null;
     }
-	
+    
+    public static boolean predictFire (PathNode [][] newFireMap, PathNode goal, double flammabilityOfFire) {
+    	
+    }
 	
 	// Returns a linked list representation of the solved path from start to goal
 	// Passed in start to handle an edge case where we don't want to go all the way to the start
@@ -1290,7 +1342,7 @@ public class StaticGenAndSearch {
 	
 	public static void main(String[] args) throws Exception {
 		
-		/*PathNode[][] fireMap = generateMap(10, 0.1, true);
+		PathNode[][] fireMap = generateMap(10, 0.1, true);
 		PathNode initialFire = findInitialFire(fireMap);
 //		printMap(fireMap);
 //		System.out.println();
@@ -1304,14 +1356,14 @@ public class StaticGenAndSearch {
 			printMazeSolutionGUI(fireMap, initialAStar, fireMap[0][0], "Adversarial Search");
 		} else {
 			System.out.println("Fire cannot reach start.");
-		}*/
+		}
 		
 //		boolean success = ignoreFireSpreading (fireMap, fireGoal, 0.5);
 //		System.out.println("!!!!!" + success + "!!!!!");
 //		LinkedList <PathNode> path = generateSolvedPath (fireGoal);
 //		fireSpreads(fireMap, 1.0);
 		
-		plotFireMazeSolvability();
+//		plotFireMazeSolvability();
 
 		/* dimTester();
 		
