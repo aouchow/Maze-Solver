@@ -413,22 +413,6 @@ public class StaticGenAndSearch {
 		return null;
 	}
 	
-	public static void printMap(PathNode[][]map) {
-		for (int i = 0; i < map.length; i++) {
-			for (int j = 0; j < map.length; j++) {
-				System.out.print("(" + map[i][j].row + "," + map[i][j].col + ") ");
-				if (map[i][j].isEmpty && !map[i][j].isOnFire) {
-					System.out.print("free");
-				}else if (!map[i][j].isEmpty){
-					System.out.print("occupied");
-				}else if (map[i][j].isOnFire) {
-					System.out.print("fire");
-				}
-				System.out.print("\t");
-			}
-			System.out.println();
-		}
-	}
 	public static PathNode[][] deepCopy(PathNode[][] original) throws CloneNotSupportedException{ //should not throw exception--clone should be supported
 		PathNode[][]copy = new PathNode[original.length][original.length];
 		for (int i = 0; i < copy.length; i++) {
